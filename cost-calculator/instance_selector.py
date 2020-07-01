@@ -9,6 +9,29 @@ import logging
 t_unlimited_price = 0.05
 
 
+def cheapest_custom_instance(cid, cpu_request, memory_request):
+    max_price = 100000000.0
+    custom_price = max_price
+    custom_cpus = 10000000000
+    custom_memory = 10000000000
+    mem_ceiling = math.ceil(float(memory_request) / cid['baseMemoryUnit'])
+    base_mem_size = cid['baseMemoryUnit'] * mem_ceiling
+    for cpu in cid['possibleNumberOfCPUs']:
+        if (cpu_request <= cpu < custom_cpus and
+                base_mem_size <= cid['maximumMemoryPerCPU'] * cpu):
+            memory = base_mem_size
+            if memory < cid['minimumMemoryPerCPU'] * cpu:
+                memory = cid['minimumMemoryPerCPU'] * cpu
+            price = (memory * cid['pricePerGBOfMemory'] +
+                     cpu * cid['pricePerCPU'])
+            if price < custom_price:
+                custom_price = price
+                custom_cpus = cpu
+                custom_memory = memory
+    if custom_price == max_price:
+        return None, None, max_price
+    return custom_cpus, custom_memory, custom_price
+
 
 class InstanceSelector(object):
     def __init__(self, cloud, region,
@@ -38,33 +61,13 @@ class InstanceSelector(object):
                 cheapest_instance = inst['instanceType']
         return cheapest_instance, lowest_price
 
-    def cheapest_custom_instance(self, cid, cpu_request, memory_request):
-        custom_price = 100000000.0
-        custom_cpus = 10000000000
-        custom_memory = 10000000000
-        mem_ceiling = math.ceil(float(memory_request) / cid['baseMemoryUnit'])
-        base_mem_size = cid['baseMemoryUnit'] * mem_ceiling
-        for cpu in cid['possibleNumberOfCPUs']:
-            if (cpu_request < cpu < custom_cpus and
-                    base_mem_size <= cid['maximumMemoryPerCPU'] * cpu):
-                memory = base_mem_size
-                if memory < cid['minimumMemoryPerCPU'] * cpu:
-                    memory = cid['minimumMemoryPerCPU'] * cpu
-                price = (memory * cid['pricePerGBOfMemory'] +
-                         cpu * cid['pricePerCPU'])
-                if price < custom_price:
-                    custom_price = price
-                    custom_cpus = cpu
-                    custom_memory = memory
-        return custom_cpus, custom_memory, custom_price
-
     def get_custom_instances(self, cpu_request, memory_request, gpu_spec):
         inst_data = []
         for cid in self.custom_data:
             if (cid['baseMemoryUnit'] == 0.0 or
                     len(cid['possibleNumberOfCPUs']) < 1):
                 continue
-            custom_cpus, custom_memory, price = self.cheapest_custom_instance(
+            custom_cpus, custom_memory, price = cheapest_custom_instance(
                 cid, cpu_request, memory_request)
             if not custom_cpus or not custom_memory:
                 continue
@@ -73,7 +76,7 @@ class InstanceSelector(object):
                 if gpu > max_gpus:
                     max_gpus = gpu
             instance_type = '{}-custom-{}-{}'.format(
-                cid['instanceFamily'], custom_cpus, custom_memory)
+                cid['instanceFamily'], custom_cpus, int(custom_memory*1024))
             inst_data.append({
                 'instanceType':      instance_type,
                 'price':             price,
@@ -131,39 +134,16 @@ class InstanceSelector(object):
 
 def make_instance_selector(datadir, cloud, region):
     filename = '{}_instance_data.json'.format(cloud)
-    jsonstr = open(os.path.join(datadir, filename)).read()
+    filepath = os.path.join(datadir, filename)
+    with open(filepath) as fp:
+        jsonstr = fp.read()
     inst_data_by_region = json.loads(jsonstr)
     filename = '{}_custom_instance_data.json'.format(cloud)
+    filepath = os.path.join(datadir, filename)
     custom_inst_data_by_region = {}
-    if os.path.exists(filename):
-        jsonstr = open(os.path.join(datadir, filename)).read()
-        custom_inst_data_by_region = json.loads(jsonstr)
+    if os.path.exists(filepath):
+        with open(filepath) as fp:
+            jsonstr = fp.read()
+            custom_inst_data_by_region = json.loads(jsonstr)
     return InstanceSelector(cloud, region,
                             inst_data_by_region, custom_inst_data_by_region)
-
-
-def tests(datadir):
-    tests = [
-        ('aws', 'us-east-1'),
-        ('azure', 'East US 2'),
-        ('gce', 'us-west1-a'),
-    ]
-    for cloud, region in tests:
-        instance_selector = make_instance_selector(datadir, cloud, region)
-        print(instance_selector.get_cheapest_instance(1, 1, ''))
-        print(instance_selector.get_cheapest_instance(1, 8, ''))
-        print(instance_selector.get_cheapest_instance(.2, 1, ''))
-        print(instance_selector.get_cheapest_instance(.8, 8, ''))
-        print(instance_selector.get_cheapest_instance(.9, 8, ''))
-        print(instance_selector.get_cheapest_instance(2, 8, ''))
-        print(instance_selector.get_cheapest_instance(0, 0, ''))
-
-
-def main():
-    scriptdir = os.path.dirname(os.path.realpath(__file__))
-    datadir = os.path.join(scriptdir, 'instance-data')
-    tests(datadir)
-
-
-if __name__ == '__main__':
-    main()
