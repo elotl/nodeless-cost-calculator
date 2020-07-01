@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<table class="table">
+  <thead>
+    <!-- NAME      UNITS     RUNNING   STATUS    RESTARTS   NODE      IP        AGE-->
+    <tr>
+      <th>Namespace</th>
+      <th>Name</th>
+      <th>CPU</th>
+      <th>Memory</th>
+      <th>GPU</th>
+      <th>Instance Type</th>
+      <th>Cost</th>
+    </tr>
+    <tbody>
+      {% for pod in pods %}
+      <tr>
+	<td>{{ pod.namespace|e }}</td>
+	<td>{{ pod.name|e }}</td>
+	<td>{{ pod.cpu|e }}</td>
+	<td>{{ pod.memory|e }}</td>
+	<td>{{ pod.gpu }}</td>
+	<td>{{ pod.instance_type }}</td>
+	<td>{{ pod.cost }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
