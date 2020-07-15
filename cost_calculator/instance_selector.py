@@ -8,7 +8,6 @@ import logging
 
 t_unlimited_price = 0.05
 
-
 def cheapest_custom_instance(cid, cpu_request, memory_request):
     max_price = 100000000.0
     custom_price = max_price
@@ -132,18 +131,18 @@ class InstanceSelector(object):
         return cheapest_instance, lowest_price
 
 
-def make_instance_selector(datadir, cloud, region):
-    filename = '{}_instance_data.json'.format(cloud)
+def make_instance_selector(datadir, cloud_provider, region):
+    filename = '{}_instance_data.json'.format(cloud_provider)
     filepath = os.path.join(datadir, filename)
     with open(filepath) as fp:
         jsonstr = fp.read()
     inst_data_by_region = json.loads(jsonstr)
-    filename = '{}_custom_instance_data.json'.format(cloud)
+    filename = '{}_custom_instance_data.json'.format(cloud_provider)
     filepath = os.path.join(datadir, filename)
     custom_inst_data_by_region = {}
     if os.path.exists(filepath):
         with open(filepath) as fp:
             jsonstr = fp.read()
             custom_inst_data_by_region = json.loads(jsonstr)
-    return InstanceSelector(cloud, region,
+    return InstanceSelector(cloud_provider, region,
                             inst_data_by_region, custom_inst_data_by_region)

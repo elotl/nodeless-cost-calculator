@@ -19,8 +19,13 @@
       <tr>
 	<td>{{ pod.namespace|e }}</td>
 	<td>{{ pod.name|e }}</td>
+	{% if pod.no_resource_spec %}
+	<td><span class="text-danger">{{ pod.cpu|e }}</span></td>
+	<td><span class="text-danger">{{ pod.memory|e }}</span></td>
+	{% else %}
 	<td>{{ pod.cpu|e }}</td>
 	<td>{{ pod.memory|e }}</td>
+	{% endif %}
 	<td>{{ pod.gpu }}</td>
 	<td>{{ pod.instance_type }}</td>
 	<td>{{ pod.cost }}</td>
