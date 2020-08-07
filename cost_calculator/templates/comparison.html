@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="savings-summary">
+  <h1>Savings Summary</h1>
+  <div class="savings-summary-box">
+    <p class="savings-summary-header"><b>Forcasted savings</b></p>
+    <span class="savings-summary-text">${{ data.savings }}</span>
+    <p><b>Estimated Savings:</b> {{ data.savings_percentage }}%</p>
+  </div>
+  
+  <table class="table table-striped savings-table">
+    <thead>
+      <tr>
+        <th class="savings-table-header">Current Cluster</th>
+        <th class="savings-table-header">Nodeless Cluster</th>
+      </tr> 
+      <tbody>
+        <tr>
+          <td><b>Cost:</b> ${{ data.node_cost }}</td>
+          <td><b>Cost:</b> ${{ data.pod_cost }}</td>
+        </tr>
+        <tr>
+          <td><b>Instance Count:</b> {{ data.node_count }}</td>
+          <td><b>Instance Count:</b> {{ data.pod_count }}</td>
+        </tr>
+        <tr>
+          <td><b>Total CPU:</b> {{ data.node_total_cpu }}</td>
+          <td><b>Total CPU:</b> {{ data.pod_total_cpu }}</td>
+        </tr>
+        <tr>
+          <td><b>Total Memory:</b> {{ data.node_total_memory }} GB</td>
+          <td><b>Total Memory:</b> {{ data.pod_total_memory }} GB</td>
+        </tr>
+      </tbody>
+    </thead>
+</table>
+</div>
+{% endblock %}

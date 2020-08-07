@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div>
+  <table class="table">
+    <thead>
+      <!-- NAME      UNITS     RUNNING   STATUS    RESTARTS   NODE      IP        AGE-->
+      <tr>
+        <th>Name</th>
+        <th>NodeGroup</th>
+        <th>CPU</th>
+        <th>Memory</th>
+        <th>GPU</th>
+        <th>Instance Type</th>
+        <th>Cost</th>
+      </tr>
+      <tbody>
+        {% for node in data.nodes %}
+        <tr>
+          <td>{{ node.name }}</td>
+          <td>{{ node.nodegroup }}</td>
+          <td>{{ node.cpu|e }}</td>
+          <td>{{ node.memory|e }}</td>
+          <td>{{ node.gpu_spec }}</td>
+          <td>{{ node.instance_type }}</td>
+          <td>{{ node.cost }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </thead>
+  </table>
+  {% with cost=data.cost, num_pods=data.node_count %}
+    {% include 'cost_card.html' %}
+  {% endwith %}
+</div>
+{% endblock %}
