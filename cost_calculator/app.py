@@ -401,7 +401,7 @@ def total_pods_cost(timeframe):
 
 # cost_calculator.calculate_cluster_cost()
 # todo -- make these cli args, if none provided try and autodetect
-kubeconfig='/Users/jrroman/.kube/config'
+kubeconfig=''
 cloud_provider = 'aws'
 region = 'us-east-1'
 cost_calculator = make_cost_calculator(
