@@ -8,26 +8,26 @@
         </a>
       </li>
       <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_page == 'node_cost' }}" href="node_cost">
+          <span data-feather="server"></span>
+          Current Cost
+        </a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link {{ 'active' if active_page == 'nodeless_cost' }}" href="/nodeless_forcast">
           <span data-feather="layers"></span>
           Nodeless Cost Forecast
         </a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link {{ 'active' if active_page == 'node_cost' }}" href="node_cost">
-          <span data-feather="server"></span>
-          Current Node Cost
-        </a>
-      </li>
     </ul>
 
-    <ul class="nav flex-column mb-2">
+<!--    <ul class="nav flex-column mb-2">
       <li class="nav-item">
         <a class="nav-link {{ 'active' if active_page == 'settings' }}" href="settings">
           <span data-feather="settings"></span>
           Settings
         </a>
       </li>
-    </ul>
+</ul> -->
   </div>
 </nav>

@@ -2,36 +2,48 @@
 
 {% block content %}
 <div class="savings-summary">
-  <h1>Savings Summary</h1>
+  <h1>Projected Cost Savings Summary</h1>
+  <form action="" method="POST">
+    <select name="timeframes" onchange="">
+      {% for timeframe in data.timeframes %}
+				{% if data.selected_timeframe == timeframe %}
+					<option value="{{ timeframe }}" selected='selected'>{{ timeframe }}</option>
+				{% else %}
+					 <option value="{{ timeframe }}" >{{ timeframe }}</option>
+				{% endif %}
+      {% endfor %}
+    </select>
+    <input type="submit" />
+  </form>
   <div class="savings-summary-box">
-    <p class="savings-summary-header"><b>Forcasted savings</b></p>
+    <p class="savings-summary-header"><b>Forcasted {{ data.selected_timeframe }}ly savings</b></p>
     <span class="savings-summary-text">${{ data.savings }}</span>
-    <p><b>Estimated Savings:</b> {{ data.savings_percentage }}%</p>
+    <p><b>You will save:</b> {{ data.savings_percentage }}%</p>
   </div>
   
-  <table class="table table-striped savings-table">
-    <thead>
+  <table class="table savings-table">
+    <thead class="thead-dark">
       <tr>
-        <th class="savings-table-header">Current Cluster</th>
-        <th class="savings-table-header">Nodeless Cluster</th>
+        <th class="savings-table-header">Current</th>
+        <th class="savings-table-header">Projected</th>
       </tr> 
       <tbody>
         <tr>
           <td><b>Cost:</b> ${{ data.node_cost }}</td>
           <td><b>Cost:</b> ${{ data.pod_cost }}</td>
         </tr>
-        <tr>
+        <!-- <tr>
           <td><b>Instance Count:</b> {{ data.node_count }}</td>
           <td><b>Instance Count:</b> {{ data.pod_count }}</td>
         </tr>
         <tr>
-          <td><b>Total CPU:</b> {{ data.node_total_cpu }}</td>
-          <td><b>Total CPU:</b> {{ data.pod_total_cpu }}</td>
+          <td><b>Total CPU:</b> {{ data.node_total_cpu | round(2) }}</td>
+          <td><b>Total CPU:</b> {{ data.pod_total_cpu | round(2) }}</td>
         </tr>
         <tr>
-          <td><b>Total Memory:</b> {{ data.node_total_memory }} GB</td>
-          <td><b>Total Memory:</b> {{ data.pod_total_memory }} GB</td>
-        </tr>
+          <td><b>Total Memory:</b> {{ data.node_total_memory | round(2) }} GB</td>
+          <td><b>Total Memory:</b> {{ data.pod_total_memory | round(2) }} GB</td>
+        </tr> -->
       </tbody>
     </thead>
 </table>

@@ -1,0 +1,21 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cost-calculator
+spec:
+  selector:
+    matchLabels:
+      run: cost-calculator
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: cost-calculator
+    spec:
+      containers:
+        - name: cost-calculator
+          image: 689494258501.dkr.ecr.us-east-1.amazonaws.com/elotl/cost-calculator
+          ports:
+            - containerPort: 5000
+              protocol: TCP

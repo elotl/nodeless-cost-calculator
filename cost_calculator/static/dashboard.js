@@ -2,7 +2,6 @@
 
 (function () {
   'use strict'
-  console.log('hello');
 
   feather.replace()
 

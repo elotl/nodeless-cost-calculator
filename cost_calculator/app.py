@@ -23,8 +23,13 @@ from cost_calculator.instance_selector import make_instance_selector
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 app = Flask(__name__)
-# gets initialized at startup
+
+def create_app(cloud_provider, region):
+    app.config['cloud_provider'] = cloud_provider
+    app.config['region'] = region
+    return app
 
 
 def k8s_container_resource_requirements(container):
@@ -245,7 +250,7 @@ def make_cost_calculator(kubeconfig, cloud_provider, region):
     return CostCalculator(core_client, instance_selector)
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def cost_summary():
     # TODO clean this up!!!
     global cost_calculator
@@ -261,10 +266,19 @@ def cost_summary():
         'node_total_cpu': 0,
         'node_total_memory': 0,
         'savings': 0,
-        'savings_percentage': 0
+        'savings_percentage': 0,
+        'selected_timeframe': '',
+        'timeframes': ['week', 'month', 'year']
     }
     pods = cost_calculator.calculate_cluster_cost(namespace)
     nodes = cost_calculator.calculate_current_cluster_cost()
+    # default to month for time
+    period = 'month'
+    timeframe = total_pods_cost(period)
+    if request.method == 'POST':
+        period =  request.form.get('timeframes')
+        timeframe = total_pods_cost(period)
+    data['selected_timeframe'] = period
     for node in nodes:
         data['node_cost'] += node.cost
         data['node_total_cpu'] += node.cpu
@@ -273,12 +287,12 @@ def cost_summary():
         data['pod_cost'] += pod.cost
         data['pod_total_cpu'] += pod.cpu
         data['pod_total_memory'] += pod.memory
-    data['node_cost'] = round(data['node_cost'] * cost_calculator.hours_in_month, 3)
-    data['pod_cost'] = round(data['pod_cost'] * cost_calculator.hours_in_month, 3)
+    data['node_cost'] = round(data['node_cost'] * timeframe, 2)
+    data['pod_cost'] = round(data['pod_cost'] * timeframe, 2)
     data['node_count'] = len(nodes)
     data['pod_count'] = len(pods)
-    data['savings'] = data['node_cost'] - data['pod_cost']
-    data['savings_percentage'] = (data['savings'] / data['node_cost']) * 100
+    data['savings'] = round(data['node_cost'] - data['pod_cost'], 2)
+    data['savings_percentage'] = round((data['savings'] / data['node_cost']) * 100, 2)
 
     return flask.render_template('comparison.html', data=data)
 
@@ -313,6 +327,7 @@ def forcast_summary():
         'cost': 0,
         'pods': [],
         'pod_count': 0,
+        'selected_namespace': '',
         'namespaces': ['all']
     }
     pods = cost_calculator.calculate_cluster_cost(namespace)
@@ -322,6 +337,7 @@ def forcast_summary():
 
     if request.method == 'POST':
         namespace = request.form.get('namespaces')
+        data['selected_namespace'] = namespace
         for pod in pods:
             if pod.namespace != namespace and namespace != 'all':
                 continue
@@ -344,18 +360,34 @@ def calc(namespace):
     return cost_calculator.pod_costs(namespace)
 
 
+def total_pods_cost(timeframe):
+    global cost_calculator
+    namespace = ''
+    # todo -- cleanup hardcoded time values
+    if timeframe == 'week':
+        timeframe = cost_calculator.hours_in_week
+    elif timeframe == 'month':
+        timeframe = cost_calculator.hours_in_month
+    elif timeframe == 'year':
+        timeframe = cost_calculator.hours_in_year
+    else:
+        # todo -- add catch for no such timeframe
+        return
+    return timeframe
+
+
+# cost_calculator.calculate_cluster_cost()
 # todo -- make these cli args, if none provided try and autodetect
 kubeconfig='/Users/jrroman/.kube/config'
 cloud_provider = 'aws'
 region = 'us-east-1'
 cost_calculator = make_cost_calculator(
     kubeconfig, cloud_provider, region)
-# cost_calculator.calculate_cluster_cost()
 
-class FlaskConfig:
-    pass
+#class FlaskConfig:
+#    pass
 
-flask_config = FlaskConfig()
+#flask_config = FlaskConfig()
 #flask_config.JOBS = [
 #    {
 #        'id': 'job1',
@@ -365,13 +397,13 @@ flask_config = FlaskConfig()
 #        'seconds': 20,
 #    }
 #]
-app.config.from_object(flask_config)
-scheduler = APScheduler()
-scheduler.init_app(app)
-scheduler.start()
-
+#app.config.from_object(flask_config)
+#scheduler = APScheduler()
+#scheduler.init_app(app)
+#scheduler.start()
 if __name__ == "__main__":
     app.run()
+
 
 #@app.route('/api/cost/pod/<pod_name>', methods=['GET'])
 #def pod_cost_by_name(pod_name):

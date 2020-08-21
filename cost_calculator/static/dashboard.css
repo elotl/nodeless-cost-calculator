@@ -135,7 +135,7 @@ body {
 .savings-summary-box {
     align-items: center;
     background-color: rgba(251, 219, 0, .2);
-    border: 2px solid #000000;
+    border: 2px solid #a1a1a1;
     box-sizing: content-box;
     border-radius: 10px;
     display: flex;
@@ -152,9 +152,8 @@ body {
 }
 
 .savings-table {
-    box-shadow: 1px 1px 1px 2px;
+    box-shadow: 1px 1px 1px 2px #111111;
     margin: 20px 0;
-    text-align: center;
     width: 40%;
 }
 
