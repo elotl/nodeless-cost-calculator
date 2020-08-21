@@ -4,7 +4,8 @@
 
 <div class="cost-summary">
   <form action="" method="POST">
-    <select name="namespaces" onchange="">
+    <label for="namespaces">Choose Namespace</label>
+    <select name="namespaces" onchange="this.form.submit()">
       {% for namespace in data.namespaces %}
         {% if data.selected_namespace == namespace %}
           <option value="{{ namespace }}" selected='selected'>{{ namespace }}</option>
@@ -13,7 +14,6 @@
         {% endif %}
       {% endfor %}
     </select>
-    <input type="submit" />
   </form>
   <table class="table">
     <thead>
@@ -47,9 +47,21 @@
     </thead>
   </table>
   <p>
-    <strong>Note: Nodeless cost is projected based on cpu and memory resource requests and limits for the applications running on the cluster</strong>
+    <strong>Note:</strong> Nodeless cost is projected based on cpu and memory resource requests and limits for the applications running on the cluster
   </p>
-  {% with cost=data.cost, num_pods=data.pod_count %}
+  <form action="" method="POST">
+    <label for="timeframes">Timeframe</label>
+    <select name="timeframes" onchange="this.form.submit()">
+      {% for timeframe in data.timeframes %}
+				{% if data.selected_timeframe == timeframe %}
+					<option value="{{ timeframe }}" selected='selected'>{{ timeframe }}</option>
+				{% else %}
+					 <option value="{{ timeframe }}" >{{ timeframe }}</option>
+				{% endif %}
+      {% endfor %}
+    </select>
+  </form>
+  {% with cost=data.cost, num_pods=data.pod_count, timeframe=data.selected_timeframe %}
     {% include 'cost_card.html' %}
   {% endwith %}
 </div>

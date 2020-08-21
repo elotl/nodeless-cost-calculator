@@ -29,7 +29,19 @@
       </tbody>
     </thead>
   </table>
-  {% with cost=data.cost, num_pods=data.node_count %}
+  <form action="" method="POST">
+    <label for="timeframes">Timeframe</label>
+    <select name="timeframes" onchange="this.form.submit()">
+      {% for timeframe in data.timeframes %}
+				{% if data.selected_timeframe == timeframe %}
+					<option value="{{ timeframe }}" selected='selected'>{{ timeframe }}</option>
+				{% else %}
+					 <option value="{{ timeframe }}" >{{ timeframe }}</option>
+				{% endif %}
+      {% endfor %}
+    </select>
+  </form>
+  {% with cost=data.cost, num_pods=data.node_count, timeframe=data.selected_timeframe %}
     {% include 'cost_card.html' %}
   {% endwith %}
 </div>

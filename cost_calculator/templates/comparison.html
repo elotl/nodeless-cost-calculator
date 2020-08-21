@@ -4,7 +4,8 @@
 <div class="savings-summary">
   <h1>Projected Cost Savings Summary</h1>
   <form action="" method="POST">
-    <select name="timeframes" onchange="">
+    <label for="timeframes">Timeframe</label>
+    <select name="timeframes" onchange="this.form.submit()">
       {% for timeframe in data.timeframes %}
 				{% if data.selected_timeframe == timeframe %}
 					<option value="{{ timeframe }}" selected='selected'>{{ timeframe }}</option>
@@ -13,7 +14,6 @@
 				{% endif %}
       {% endfor %}
     </select>
-    <input type="submit" />
   </form>
   <div class="savings-summary-box">
     <p class="savings-summary-header"><b>Forcasted {{ data.selected_timeframe }}ly savings</b></p>

@@ -297,19 +297,30 @@ def cost_summary():
     return flask.render_template('comparison.html', data=data)
 
 
-@app.route('/node_cost')
+@app.route('/node_cost', methods=['GET', 'POST'])
 def node_cost():
     global cost_calculator
     data = {
         'cost': 0,
         'nodes': [],
-        'node_count': 0
+        'node_count': 0,
+        'selected_timeframe': '',
+        'timeframes': ['week', 'month', 'year']
     }
     nodes = cost_calculator.calculate_current_cluster_cost()
+
+    period = 'month'
+    timeframe = total_pods_cost(period)
+    if request.method == 'POST':
+        period =  request.form.get('timeframes')
+        if period:
+            timeframe = total_pods_cost(period)
+    data['selected_timeframe'] = period
+
     for node in nodes:
         print(node)
         data['cost'] += node.cost
-    data['cost'] = round(data['cost'] * cost_calculator.hours_in_month, 3)
+    data['cost'] = round(data['cost'] * timeframe, 2)
     data['nodes'] = nodes
     data['node_count'] = len(nodes)
 
@@ -328,25 +339,37 @@ def forcast_summary():
         'pods': [],
         'pod_count': 0,
         'selected_namespace': '',
-        'namespaces': ['all']
+        'namespaces': ['all'],
+        'selected_timeframe': '',
+        'timeframes': ['week', 'month', 'year']
     }
     pods = cost_calculator.calculate_cluster_cost(namespace)
     for pod in pods:
         if pod.namespace not in data['namespaces']:
             data['namespaces'].append(pod.namespace)
 
+    period = 'month'
+    timeframe = total_pods_cost(period)
     if request.method == 'POST':
         namespace = request.form.get('namespaces')
-        data['selected_namespace'] = namespace
+        if not namespace:
+            namespace = 'all' 
+        else:
+            data['selected_namespace'] = namespace
         for pod in pods:
             if pod.namespace != namespace and namespace != 'all':
                 continue
             data['pods'].append(pod)
+        period =  request.form.get('timeframes')
+        if period:
+            timeframe = total_pods_cost(period)
+    data['selected_timeframe'] = period
 
     if request.method == 'GET':
         data['pods'] = pods
 
-    data['cost'] = cost_calculator.calculate_cost(namespace, cost_calculator.hours_in_month)
+    print('namespace!: ', namespace)
+    data['cost'] = cost_calculator.calculate_cost(namespace, timeframe)
     data['pod_count'] = len(data['pods'])
 
     return flask.render_template('cost_summary.html', data=data)
