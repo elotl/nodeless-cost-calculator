@@ -51,7 +51,7 @@ spec:
       serviceAccountName: cost-calculator
       containers:
         - name: cost-calculator
-          image: 689494258501.dkr.ecr.us-east-1.amazonaws.com/elotl/cost-calculator:91c3414
+          image: 689494258501.dkr.ecr.us-east-1.amazonaws.com/elotl/cost-calculator:e2e0a29
           ports:
             - containerPort: 5000
               protocol: TCP
