@@ -12,7 +12,7 @@ datadir = os.path.join(scriptdir, 'instance-data')
 class TestInstanceSelector(unittest.TestCase):
     def assert_matches(self, cpu, memory, gpu, expected):
         inst_type, _ = self.instance_selector.get_cheapest_instance(cpu, memory, gpu)
-        msg = f'{self.instance_selector.cloud}: {cpu}, {memory}, {gpu} != {expected}, got {inst_type}'
+        msg = f'{self.instance_selector.cloud}: {cpu}, {memory}, {gpu} != expected {expected}, got {inst_type}'
         self.assertEqual(inst_type, expected, msg)
 
     def run_instance_test(self, cloud, region, cases):
@@ -26,9 +26,11 @@ class TestInstanceSelector(unittest.TestCase):
             (0, 3.75, '1 nvidia-tesla-p100', 'n1-standard-1'),
             (0.5, 1.7, '', 'g1-small'),
             (2, 1, '', 'e2-micro'),
-            (1, 3.75, '', 'e2-custom-1-3840'),
+            (1, 3.75, '', 'n1-standard-1'),
             (48, 180, '', 'n2-standard-48'),
-            (32, 15, '', 'n2-custom-32-16384'),
+            (32, 15, '', 'e2-highcpu-32'),
+            (34, 16, '', 'n2-custom-34-17408'),
+            (1.0, 0.5, '', 'n1-custom-1-1024'),
 
         ]
         self.run_instance_test('gce', 'us-west1-a', cases)

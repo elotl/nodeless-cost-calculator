@@ -21,6 +21,8 @@ def cheapest_custom_instance(cid, cpu_request, memory_request):
             memory = base_mem_size
             if memory < cid['minimumMemoryPerCPU'] * cpu:
                 memory = cid['minimumMemoryPerCPU'] * cpu
+            ceil = math.ceil(memory / cid['baseMemoryUnit'])
+            memory = ceil * cid['baseMemoryUnit']
             price = (memory * cid['pricePerGBOfMemory'] +
                      cpu * cid['pricePerCPU'])
             if price < custom_price:
