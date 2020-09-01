@@ -42,10 +42,7 @@ class InstanceSelector(object):
         self.custom_data = custom_inst_data_by_region.get(region, {})
 
     def spec_for_inst_type(self, inst_type):
-        # todo handle nil return
-        for inst in self.inst_data:
-            if inst_type == inst["instanceType"]:
-                return inst
+        return self.inst_data.get(inst_type)
 
     def price_for_cpu_spec(self, cpu, inst):
         if not inst['burstable']:
