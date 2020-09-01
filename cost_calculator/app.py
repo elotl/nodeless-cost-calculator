@@ -379,7 +379,8 @@ def total_pods_cost(timeframe):
     elif timeframe == YEAR:
         timeframe = cluster_cost_calculator.hours_in_year
     else:
-        # todo -- add catch for no such timeframe
+        flash('Error: Timeframe given is not valid. '
+              'Given timeframe: {}'.format(timeframe))
         return
     return timeframe
 
