@@ -2,6 +2,17 @@
 
 {% block content %}
 <div class="savings-summary">
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <div class="alert alert-danger" role="alert">
+    <ul class=flashes>
+      {% for message in messages %}
+      <li>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% endwith %}
   <h1>Projected Cost Savings Summary</h1>
   <form action="" method="POST">
     <label for="timeframes">Timeframe</label>

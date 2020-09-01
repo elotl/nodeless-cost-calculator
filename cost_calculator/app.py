@@ -5,7 +5,7 @@ import sys
 import attr
 from kubernetes import client, config
 from kubernetes.utils import parse_quantity
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, flash
 import flask
 
 from cost_calculator.instance_selector import make_instance_selector
@@ -17,6 +17,7 @@ MONTH = 'month'
 YEAR = 'year'
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
 
 
 def k8s_container_resource_requirements(container):
@@ -150,7 +151,7 @@ class Node:
 
 
 @attr.s
-class CostCalculator:
+class ClusterCost:
     '''
     This is the central hub of our application it takes care of
     querying for pods, and using the InstanceSelector to create a cost
@@ -167,22 +168,8 @@ class CostCalculator:
     hours_in_week = 168
     hours_in_month = 730
     hours_in_year = 8760
-    # def __attrs_post_init__(self):
-    #     if self.namespace:
-    #         self.pod_lister_func = functools.partial(
-    #             self.namespace)
-    #     else:
-    #         self.pod_lister_func = functools.partial(
 
-    def calculate_cluster_cost(self, namespace):
-        pods = self.get_pods(namespace)
-        for pod in pods:
-            pod.instance_type, pod.cost = self.instance_selector.get_cheapest_instance(pod.cpu, pod.memory, pod.gpu_spec)
-            if pod.cpu == 0 and pod.memory == 0:
-                pod.no_resource_spec = True
-        return pods
-
-    def calculate_current_cluster_cost(self):
+    def get_current_cluster_cost(self):
         # todo
         # calculate the cost of the cluster currently with nodes
         nodes = self.get_nodes()
@@ -196,10 +183,19 @@ class CostCalculator:
             node.gpu_spec = node_spec['gpu']
         return nodes
 
-    def calculate_nodeless_cost(self, namespace, num_hours, pod_name=''):
+    # todo: rename this to calculate_nodeless_cost
+    def get_nodeless_pods(self, namespace):
+        pods = self.get_pods(namespace)
+        for pod in pods:
+            pod.instance_type, pod.cost = self.instance_selector.get_cheapest_instance(pod.cpu, pod.memory, pod.gpu_spec)
+            if pod.cpu == 0 and pod.memory == 0:
+                pod.no_resource_spec = True
+        return pods
+
+    def get_total_nodeless_cost(self, namespace, num_hours, pod_name=''):
         if namespace == 'all':
             namespace = ''
-        pod_list = self.calculate_cluster_cost(namespace)
+        pod_list = self.get_nodeless_pods(namespace)
         if pod_name != '':
             for pod in pod_list:
                 if pod.name != pod_name:
@@ -217,7 +213,7 @@ class CostCalculator:
             return round(cost * num_hours, 3)
 
     def pod_costs(self, namespace):
-        pods = self.calculate_cluster_cost(namespace)
+        pods = self.get_nodeless_pods(namespace)
         return jsonify(costs=[pod.cost * 100 for pod in pods])
 
     def get_pods(self, namespace):
@@ -235,7 +231,7 @@ class CostCalculator:
         return [Node.from_k8s(node) for node in nodes.items]
 
 
-def make_instance_calculator(kubeconfig, cloud_provider, region):
+def make_cluster_cost_calculator(kubeconfig, cloud_provider, region):
     if kubeconfig:
         config.load_kube_config(config_file=kubeconfig)
     else:
@@ -243,13 +239,13 @@ def make_instance_calculator(kubeconfig, cloud_provider, region):
     core_client = client.CoreV1Api()
     datadir = 'instance-data'
     instance_selector = make_instance_selector(datadir, cloud_provider, region)
-    return CostCalculator(core_client, instance_selector)
+    return ClusterCost(core_client, instance_selector)
 
 
 @app.route('/', methods=['GET', 'POST'])
 def cost_summary():
     # TODO clean this up!!!
-    global instance_calculator
+    global cluster_cost
     namespace = ''
     data = {
         'pod_cost': 0,
@@ -266,8 +262,8 @@ def cost_summary():
         'timeframes': [WEEK, MONTH, YEAR]
     }
 
-    pods = instance_calculator.calculate_cluster_cost(namespace)
-    nodes = instance_calculator.calculate_current_cluster_cost()
+    pods = cluster_cost_calculator.get_nodeless_pods(namespace)
+    nodes = cluster_cost_calculator.get_current_cluster_cost()
     # default to month for time
     period = MONTH
     timeframe = total_pods_cost(period)
@@ -275,10 +271,10 @@ def cost_summary():
         period =  request.form.get('timeframes')
         timeframe = total_pods_cost(period)
     data['selected_timeframe'] = period
+    invalid_nodes = []
     for node in nodes:
         if not node.cost:
-            # todo: flash an error at the top of the screen
-            pass
+            invalid_nodes.append(node.name)
         else:
             data['node_cost'] += node.cost
             data['node_total_cpu'] += node.cpu
@@ -287,19 +283,24 @@ def cost_summary():
         data['pod_cost'] += pod.cost
         data['pod_total_cpu'] += pod.cpu
         data['pod_total_memory'] += pod.memory
+    if invalid_nodes:
+        flash('Error: cost summary is likely incorrect. Could not calculate '
+              'node cost for the following nodes: {}'.format(
+                  ', '.join(invalid_nodes)))
     data['node_cost'] = round(data['node_cost'] * timeframe, 2)
     data['pod_cost'] = round(data['pod_cost'] * timeframe, 2)
     data['node_count'] = len(nodes)
     data['pod_count'] = len(pods)
     data['savings'] = round(data['node_cost'] - data['pod_cost'], 2)
-    data['savings_percentage'] = round(
-        (data['savings'] / data['node_cost']) * 100, 2)
+    if data['node_cost'] != 0:
+        data['savings_percentage'] = round(
+            (data['savings'] / data['node_cost']) * 100, 2)
     return flask.render_template('comparison.html', data=data)
 
 
 @app.route('/node_cost', methods=['GET', 'POST'])
 def node_cost():
-    global instance_calculator
+    global cluster_cost_calculator
     data = {
         'cost': 0,
         'nodes': [],
@@ -307,7 +308,7 @@ def node_cost():
         'selected_timeframe': '',
         'timeframes': [WEEK, MONTH, YEAR]
     }
-    nodes = instance_calculator.calculate_current_cluster_cost()
+    nodes = cluster_cost_calculator.get_current_cluster_cost()
 
     period = MONTH
     timeframe = total_pods_cost(period)
@@ -330,7 +331,7 @@ def node_cost():
 
 @app.route('/nodeless_forcast', methods=['GET', 'POST'])
 def forcast_summary():
-    global instance_calculator
+    global cluster_cost_calculator
     namespace = ''
     data = {
         'cost': 0,
@@ -341,7 +342,7 @@ def forcast_summary():
         'selected_timeframe': '',
         'timeframes': [WEEK, MONTH, YEAR]
     }
-    pods = instance_calculator.calculate_cluster_cost(namespace)
+    pods = cluster_cost_calculator.get_nodeless_pods(namespace)
     for pod in pods:
         if pod.namespace not in data['namespaces']:
             data['namespaces'].append(pod.namespace)
@@ -367,7 +368,7 @@ def forcast_summary():
         data['pods'] = pods
 
     print('namespace: ', namespace)
-    data['cost'] = instance_calculator.calculate_nodeless_cost(
+    data['cost'] = cluster_cost_calculator.get_total_nodeless_cost(
         namespace, timeframe)
     data['pod_count'] = len(data['pods'])
 
@@ -376,22 +377,22 @@ def forcast_summary():
 
 @app.route('/api/cost/pods/<namespace>', methods=['GET'])
 def calc(namespace):
-    global instance_calculator
+    global cluster_cost_calculator
     if namespace == 'all':
         namespace = ''
-    return instance_calculator.pod_costs(namespace)
+    return cluster_cost_calculator.pod_costs(namespace)
 
 
 def total_pods_cost(timeframe):
-    global instance_calculator
+    global cluster_cost_calculator
     namespace = ''
     # todo -- cleanup hardcoded time values
     if timeframe == WEEK:
-        timeframe = instance_calculator.hours_in_week
+        timeframe = cluster_cost_calculator.hours_in_week
     elif timeframe == MONTH:
-        timeframe = instance_calculator.hours_in_month
+        timeframe = cluster_cost_calculator.hours_in_month
     elif timeframe == YEAR:
-        timeframe = instance_calculator.hours_in_year
+        timeframe = cluster_cost_calculator.hours_in_year
     else:
         # todo -- add catch for no such timeframe
         return
@@ -412,46 +413,46 @@ if not region:
         'REGION environment variable is required. '
         'Please restart this pod with a REGION environment variable set.')
     sys.exit(1)
-instance_calculator = make_instance_calculator(
+cluster_cost_calculator = make_cluster_cost_calculator(
     kubeconfig, cloud_provider, region)
 
 
 #@app.route('/api/cost/pod/<pod_name>', methods=['GET'])
 #def pod_cost_by_name(pod_name):
-#    global instance_calculator
+#    global cluster_cost_calculator
 #    namespace = ''
-#    pod_cost = instance_calculator.calculate_monthly_cost(namespace, pod_name)
+#    pod_cost = cluster_cost_calculator.calculate_monthly_cost(namespace, pod_name)
 #    return jsonify(pod_cost)
 #
 #
 #@app.route('/api/cost/namespace/<namespace>', methods=['GET'])
 #def pod_cost_by_namespace(namespace):
-#    global instance_calculator
-#    pod_cost = instance_calculator.calculate_nodeless_cost(namespace)
+#    global cluster_cost_calculator
+#    pod_cost = cluster_cost_calculator.get_total_nodeless_cost(namespace)
 #    return jsonify(pod_cost)
 #
 #
 #@app.route('/api/cost/<timeframe>', methods=['GET'])
 #def total_pods_cost(timeframe):
-#    global instance_calculator
+#    global cluster_cost_calculator
 #    namespace = ''
 #    # todo -- cleanup hardcoded time values
 #    if timeframe == WEEK:
-#        timeframe = instance_calculator.hours_in_week
+#        timeframe = cluster_cost_calculator.hours_in_week
 #    elif timeframe == MONTH:
-#        timeframe = instance_calculator.hours_in_month
+#        timeframe = cluster_cost_calculator.hours_in_month
 #    elif timeframe == YEAR:
-#        timeframe = instance_calculator.hours_in_year
+#        timeframe = cluster_cost_calculator.hours_in_year
 #    else:
 #        # todo -- add catch for no such timeframe
 #        return
 #
-#    pod_cost = instance_calculator.calculate_nodeless_cost(namespace, timeframe)
+#    pod_cost = cluster_cost_calculator.calculate_nodeless_cost(namespace, timeframe)
 #    return jsonify(pod_cost)
 #
 #
 #
 #@app.route('/api/pods', methods=['GET'])
 #def calculate():
-#    pod_list = instance_calculator.calculate_cluster_cost('')
+#    pod_list = cluster_cost_calculator.get_nodeless_pods('')
 #    return jsonify(pods=[pod.serialize() for pod in pod_list])
