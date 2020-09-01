@@ -170,8 +170,6 @@ class ClusterCost:
     hours_in_year = 8760
 
     def get_current_cluster_cost(self):
-        # todo
-        # calculate the cost of the cluster currently with nodes
         nodes = self.get_nodes()
         for node in nodes:
             node_spec = self.instance_selector.spec_for_inst_type(node.instance_type)
@@ -183,7 +181,6 @@ class ClusterCost:
             node.gpu_spec = node_spec['gpu']
         return nodes
 
-    # todo: rename this to calculate_nodeless_cost
     def get_nodeless_pods(self, namespace):
         pods = self.get_pods(namespace)
         for pod in pods:
@@ -245,7 +242,6 @@ def make_cluster_cost_calculator(kubeconfig, cloud_provider, region):
 @app.route('/', methods=['GET', 'POST'])
 def cost_summary():
     # TODO clean this up!!!
-    global cluster_cost
     namespace = ''
     data = {
         'pod_cost': 0,
@@ -300,7 +296,6 @@ def cost_summary():
 
 @app.route('/node_cost', methods=['GET', 'POST'])
 def node_cost():
-    global cluster_cost_calculator
     data = {
         'cost': 0,
         'nodes': [],
@@ -331,7 +326,6 @@ def node_cost():
 
 @app.route('/nodeless_forcast', methods=['GET', 'POST'])
 def forcast_summary():
-    global cluster_cost_calculator
     namespace = ''
     data = {
         'cost': 0,
@@ -377,14 +371,12 @@ def forcast_summary():
 
 @app.route('/api/cost/pods/<namespace>', methods=['GET'])
 def calc(namespace):
-    global cluster_cost_calculator
     if namespace == 'all':
         namespace = ''
     return cluster_cost_calculator.pod_costs(namespace)
 
 
 def total_pods_cost(timeframe):
-    global cluster_cost_calculator
     namespace = ''
     # todo -- cleanup hardcoded time values
     if timeframe == WEEK:
