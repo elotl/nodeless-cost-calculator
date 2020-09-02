@@ -7,10 +7,8 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-ENV FLASK_ENV=development
-
 WORKDIR /app/cost_calculator
 
-CMD ["flask", "run", "--host", "0.0.0.0"]
+# CMD ["flask", "run", "--host", "0.0.0.0"]
 
-#ENTRYPOINT ["/usr/local/bin/gunicorn", "-k", "gevent", "-w", "4", "-b", ":5000", "--access-logfile", "-", "--error-logfile", "-", "dashboard:app"]
+ENTRYPOINT ["/usr/local/bin/gunicorn", "-k", "gevent", "-w", "4", "-b", ":5000", "--access-logfile", "-", "--error-logfile", "-", "cost_calculator:app"]
