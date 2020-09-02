@@ -7,8 +7,9 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-WORKDIR /app/cost_calculator
+EXPOSE 5000
 
-# CMD ["flask", "run", "--host", "0.0.0.0"]
+ENV CLOUD_PROVIDER=aws
+ENV REGION=us-east-1
 
-ENTRYPOINT ["/usr/local/bin/gunicorn", "-k", "gevent", "-w", "4", "-b", ":5000", "--access-logfile", "-", "--error-logfile", "-", "cost_calculator:app"]
+ENTRYPOINT ["/usr/local/bin/gunicorn", "-k", "gevent", "-w", "4", "-b", "0.0.0.0:5000", "--access-logfile", "-", "--error-logfile", "-", "cost_calculator:app"]

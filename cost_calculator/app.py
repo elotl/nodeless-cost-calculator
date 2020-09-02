@@ -228,7 +228,8 @@ def make_cluster_cost_calculator(kubeconfig, cloud_provider, region):
     else:
         config.load_incluster_config()
     core_client = client.CoreV1Api()
-    datadir = 'instance-data'
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+    datadir = os.path.join(scriptdir, 'instance-data')
     instance_selector = make_instance_selector(datadir, cloud_provider, region)
     return ClusterCost(core_client, instance_selector)
 
