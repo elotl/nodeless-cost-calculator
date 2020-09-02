@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div>
+  <table class="table">
+    <thead>
+      <!-- NAME      UNITS     RUNNING   STATUS    RESTARTS   NODE      IP        AGE-->
+      <tr>
+        <th>Name</th>
+        <th>NodeGroup</th>
+        <th>CPU</th>
+        <th>Memory</th>
+        <th>GPU</th>
+        <th>Instance Type</th>
+        <th>Hourly Cost</th>
+      </tr>
+      <tbody>
+        {% for node in data.nodes %}
+        <tr>
+          <td>{{ node.name }}</td>
+          <td>{{ node.nodegroup }}</td>
+          <td>{{ node.cpu|e }}</td>
+          <td>{{ node.memory|e }}</td>
+          <td>{{ node.gpu_spec }}</td>
+          <td>{{ node.instance_type }}</td>
+          <td>{{ node.cost }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </thead>
+  </table>
+  <form action="" method="POST">
+    <label for="timeframes">Timeframe</label>
+    <select name="timeframes" onchange="this.form.submit()">
+      {% for timeframe in data.timeframes %}
+				{% if data.selected_timeframe == timeframe %}
+					<option value="{{ timeframe }}" selected='selected'>{{ timeframe }}</option>
+				{% else %}
+					 <option value="{{ timeframe }}" >{{ timeframe }}</option>
+				{% endif %}
+      {% endfor %}
+    </select>
+  </form>
+  {% with cost=data.cost, num_pods=data.node_count, timeframe=data.selected_timeframe %}
+    {% include 'cost_card.html' %}
+  {% endwith %}
+</div>
+{% endblock %}

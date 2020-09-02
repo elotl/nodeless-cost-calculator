@@ -1,20 +1,33 @@
 # Nodeless Cost Calculator
 
-_A work in progress_
+The Nodeless Cost Calculator is a dashboard that shows you the current cost of your Kubernetes cluster and the projected cost of running an equivalent cluster on Nodeless Kubernetes. The projected cost is calculated by chosing an instance type for each pod based on the resource requests and limits specified in the pod spec.
 
-## Suggested Architecture
+Unsupported features:
 
-1. A flask app that users connect to that displays the calculated cost. This might include a graph of the cost over time
-2. A background task that runs periodically. That lists pods and sums their cost
-3. Need a python instanceSelector
-4. Need files with cloud pricing data
+* Reserved instance pricing
+* Custom cloud pricing
+* Storage costs
+* Network costs
 
-## Arguments
+## Installation
 
-    --cloud-provider
-    --region
-    --namespace
-    --default-instance-type
-    --interval (default to every minute)
+Follow these instructions to install the Nodeless Cost Calculator from the command line.
 
-## RBAC Credentials
+### Prerequisites
+
+- A Kubernetes cluster
+- [envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html)
+
+### Install from the command line
+
+Set environment variables (modify if necessary) and apply the manifests:
+
+    export NAMESPACE=default
+    export CLOUD_PROVIDER=aws  # must be one of 'aws' or 'gce'
+    export REGION=us-east-1
+
+    envsubst < manifests.yaml | kubectl apply -f -
+
+## Uninstall
+
+    kubectl -n$NAMESPACE delete Deployment,ServiceAccount,ClusterRole,ClusterRoleBinding -l app.kubernetes.io/name=nodeless-cost-calculator

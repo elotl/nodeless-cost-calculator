@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="savings-summary">
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <div class="alert alert-danger" role="alert">
+    <ul class=flashes>
+      {% for message in messages %}
+      <li>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% endwith %}
+  <h1>Projected Cost Savings Summary</h1>
+  <form action="" method="POST">
+    <label for="timeframes">Timeframe</label>
+    <select name="timeframes" onchange="this.form.submit()">
+      {% for timeframe in data.timeframes %}
+				{% if data.selected_timeframe == timeframe %}
+					<option value="{{ timeframe }}" selected='selected'>{{ timeframe }}</option>
+				{% else %}
+					 <option value="{{ timeframe }}" >{{ timeframe }}</option>
+				{% endif %}
+      {% endfor %}
+    </select>
+  </form>
+  <div class="savings-summary-box">
+    <p class="savings-summary-header"><b>Forcasted {{ data.selected_timeframe }}ly savings</b></p>
+    <span class="savings-summary-text">${{ data.savings }}</span>
+    <p><b>You will save:</b> {{ data.savings_percentage }}%</p>
+  </div>
+
+  <table class="table savings-table">
+    <thead class="thead-dark">
+      <tr>
+        <th class="savings-table-header">Current Cost</th>
+        <th class="savings-table-header">Projected Nodeless Cost</th>
+      </tr>
+      <tbody>
+        <tr>
+          <td><b>Cost:</b> ${{ data.node_cost }}</td>
+          <td><b>Cost:</b> ${{ data.pod_cost }}</td>
+        </tr>
+        <!-- <tr>
+          <td><b>Instance Count:</b> {{ data.node_count }}</td>
+          <td><b>Instance Count:</b> {{ data.pod_count }}</td>
+        </tr>
+        <tr>
+          <td><b>Total CPU:</b> {{ data.node_total_cpu | round(2) }}</td>
+          <td><b>Total CPU:</b> {{ data.pod_total_cpu | round(2) }}</td>
+        </tr>
+        <tr>
+          <td><b>Total Memory:</b> {{ data.node_total_memory | round(2) }} GB</td>
+          <td><b>Total Memory:</b> {{ data.pod_total_memory | round(2) }} GB</td>
+        </tr> -->
+      </tbody>
+    </thead>
+</table>
+</div>
+{% endblock %}

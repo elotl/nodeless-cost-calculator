@@ -5,49 +5,57 @@
 
   feather.replace()
 
-  // Graphs
-  var ctx = document.getElementById('myChart')
-  // eslint-disable-next-line no-unused-vars
-  var myChart = new Chart(ctx, {
-    "type": 'line',
-    "data": {
-      labels: [
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday'
-      ],
-      datasets: [{
-        data: [
-          15339,
-          21345,
-          18483,
-          24003,
-          23489,
-          24092,
-          12034
-        ],
-        lineTension: 0,
-        backgroundColor: 'transparent',
-        borderColor: '#007bff',
-        borderWidth: 4,
-        pointBackgroundColor: '#007bff'
-      }]
-    },
-    options: {
-      scales: {
-        yAxes: [{
-          ticks: {
-            beginAtZero: false
+  const namespace = document.getElementsByClassName('namespace-option')[1].value;
+  const costURL = `/api/cost/pods/${namespace}`;
+  console.log(costURL);
+  fetch(costURL)
+    .then(resp => resp.json())
+    .then(data => {
+      console.log(data)
+      // Graphs
+      var ctx = document.getElementById('forcast-chart').getContext('2d');
+      // eslint-disable-next-line no-unused-vars
+      var myChart = new Chart(ctx, {
+        "type": 'line',
+        "data": {
+          labels: [
+            'Sunday',
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday'
+          ],
+          datasets: [{
+            data: data.costs,
+            lineTension: 0,
+            backgroundColor: 'transparent',
+            borderColor: '#007bff',
+            borderWidth: 4,
+            pointBackgroundColor: '#007bff'
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            yAxes: [{
+              ticks: {
+                beginAtZero: false
+              }
+            }]
+          },
+          layout: {
+            padding: {
+              left: 50,
+              right: 0,
+              top: 0,
+              bottom: 0
+          },
+          legend: {
+            display: true
           }
-        }]
-      },
-      legend: {
-        display: false
-      }
-    }
-  })
+        }
+      }}); 
+    });
 }())

@@ -21,6 +21,8 @@ def cheapest_custom_instance(cid, cpu_request, memory_request):
             memory = base_mem_size
             if memory < cid['minimumMemoryPerCPU'] * cpu:
                 memory = cid['minimumMemoryPerCPU'] * cpu
+            ceil = math.ceil(memory / cid['baseMemoryUnit'])
+            memory = ceil * cid['baseMemoryUnit']
             price = (memory * cid['pricePerGBOfMemory'] +
                      cpu * cid['pricePerCPU'])
             if price < custom_price:
@@ -38,6 +40,9 @@ class InstanceSelector(object):
         self.cloud = cloud
         self.inst_data = inst_data_by_region[region]
         self.custom_data = custom_inst_data_by_region.get(region, {})
+
+    def spec_for_inst_type(self, inst_type):
+        return self.inst_data.get(inst_type)
 
     def price_for_cpu_spec(self, cpu, inst):
         if not inst['burstable']:

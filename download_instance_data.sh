@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-download_dir=$SCRIPT_DIR/cost-calculator/instance-data
+download_dir=$SCRIPT_DIR/cost_calculator/instance-data
 mkdir $download_dir
 
 declare -a instance_data_files=("aws_instance_data.json" "azure_instance_data.json" "gce_instance_data.json" "gce_custom_instance_data.json")

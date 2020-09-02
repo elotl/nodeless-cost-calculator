@@ -2,36 +2,63 @@
 
 {% block content %}
 
-<table class="table">
-  <thead>
-    <!-- NAME      UNITS     RUNNING   STATUS    RESTARTS   NODE      IP        AGE-->
-    <tr>
-      <th>Namespace</th>
-      <th>Name</th>
-      <th>CPU</th>
-      <th>Memory</th>
-      <th>GPU</th>
-      <th>Instance Type</th>
-      <th>Cost</th>
-    </tr>
-    <tbody>
-      {% for pod in pods %}
-      <tr>
-	<td>{{ pod.namespace|e }}</td>
-	<td>{{ pod.name|e }}</td>
-	{% if pod.no_resource_spec %}
-	<td><span class="text-danger">{{ pod.cpu|e }}</span></td>
-	<td><span class="text-danger">{{ pod.memory|e }}</span></td>
-	{% else %}
-	<td>{{ pod.cpu|e }}</td>
-	<td>{{ pod.memory|e }}</td>
-	{% endif %}
-	<td>{{ pod.gpu }}</td>
-	<td>{{ pod.instance_type }}</td>
-	<td>{{ pod.cost }}</td>
-      </tr>
+<div class="cost-summary">
+  <form action="" method="POST">
+    <label for="namespaces">Choose Namespace</label>
+    <select name="namespaces" onchange="this.form.submit()">
+      {% for namespace in data.namespaces %}
+        {% if data.selected_namespace == namespace %}
+          <option value="{{ namespace }}" selected='selected'>{{ namespace }}</option>
+        {% else %}
+           <option value="{{ namespace }}" >{{ namespace }}</option>
+        {% endif %}
       {% endfor %}
-    </tbody>
-</table>
+    </select>
+  </form>
+  <table class="table">
+    <thead>
+      <!-- NAME      UNITS     RUNNING   STATUS    RESTARTS   NODE      IP        AGE-->
+      <tr> <th>Namespace</th>
+        <th>Name</th>
+        <th>CPU</th>
+        <th>Memory</th>
+        <th>GPU</th>
+        <th>Instance Type</th>
+        <th>Hourly Cost</th>
+      </tr>
+      <tbody>
+        {% for pod in data.pods %}
+        <tr>
+          <td>{{ pod.namespace|e }}</td>
+          <td>{{ pod.name|e }}</td>
+          <td>{{ pod.cpu|round(2)|e }}</td>
+          <td>{{ pod.memory|round(2)|e }}</td>
+          <td>{{ pod.gpu }}</td>
+          <td>{{ pod.instance_type }}</td>
+          <td>{{ pod.cost }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </thead>
+  </table>
+  <p>
+    <strong>Note:</strong> Nodeless cost is projected based on cpu and memory resource requests and limits for the applications running on the cluster. Projected cost uses on-demand instance price by default. Spot projections coming soon!
+  </p>
+  <form action="" method="POST">
+    <label for="timeframes">Timeframe</label>
+    <select name="timeframes" onchange="this.form.submit()">
+      {% for timeframe in data.timeframes %}
+				{% if data.selected_timeframe == timeframe %}
+					<option value="{{ timeframe }}" selected='selected'>{{ timeframe }}</option>
+				{% else %}
+					 <option value="{{ timeframe }}" >{{ timeframe }}</option>
+				{% endif %}
+      {% endfor %}
+    </select>
+  </form>
+  {% with cost=data.cost, num_pods=data.pod_count, timeframe=data.selected_timeframe %}
+    {% include 'cost_card.html' %}
+  {% endwith %}
+</div>
 
 {% endblock %}

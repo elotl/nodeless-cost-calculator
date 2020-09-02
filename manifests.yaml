@@ -1,0 +1,74 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nodeless-cost-calculator
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: nodeless-cost-calculator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nodeless-cost-calculator
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: nodeless-cost-calculator
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nodeless-cost-calculator
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: nodeless-cost-calculator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nodeless-cost-calculator
+subjects:
+- kind: ServiceAccount
+  name: nodeless-cost-calculator
+  namespace: ${NAMESPACE}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeless-cost-calculator
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: nodeless-cost-calculator
+spec:
+  selector:
+    matchLabels:
+      run: nodeless-cost-calculator
+  replicas: 1
+  template:
+    metadata:
+      namespace: ${NAMESPACE}
+      labels:
+        run: nodeless-cost-calculator
+    spec:
+      serviceAccount: nodeless-cost-calculator
+      serviceAccountName: nodeless-cost-calculator
+      containers:
+        - name: nodeless-cost-calculator
+          image: elotl/nodeless-cost-calculator:latest
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+          env:
+            - name: CLOUD_PROVIDER
+              value: ${CLOUD_PROVIDER}
+            - name: REGION
+              value: ${REGION}
