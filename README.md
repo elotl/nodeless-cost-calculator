@@ -21,9 +21,14 @@ Set environment variables (modify if necessary) and apply the manifests:
 
     envsubst < manifests.yaml | kubectl apply -f -
 
+Once the nodeless-cost-calculator deployment is running, the easiest way to connect to the pod is to use `kubectl port-forward`
+
+    kubectl -n$NAMESPACE port-forward $(kubectl -n$NAMESPACE get pod -l app.kubernetes.io/name=nodeless-cost-calculator -o custom-columns=:metadata.name --no-headers) 5000
+
 ## Uninstall
 
     kubectl -n$NAMESPACE delete Deployment,ServiceAccount,ClusterRole,ClusterRoleBinding -l app.kubernetes.io/name=nodeless-cost-calculator
+
 
 ## Unsupported features
 

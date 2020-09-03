@@ -58,6 +58,7 @@ spec:
       namespace: ${NAMESPACE}
       labels:
         run: nodeless-cost-calculator
+        app.kubernetes.io/name: nodeless-cost-calculator
     spec:
       serviceAccount: nodeless-cost-calculator
       serviceAccountName: nodeless-cost-calculator
