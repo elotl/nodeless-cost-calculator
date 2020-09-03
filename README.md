@@ -1,14 +1,6 @@
 # Nodeless Cost Calculator
 
-The Nodeless Cost Calculator is a dashboard that shows you the current cost of your Kubernetes cluster and the projected cost of running an equivalent cluster on Nodeless Kubernetes. The projected cost is calculated by chosing an instance type for each pod based on the resource requests and limits specified in the pod spec.
-
-Unsupported features:
-
-* Reserved instance pricing
-* Custom cloud pricing
-* Storage costs
-* Network costs
-* Cost of nodes with GPU instances
+The Nodeless Cost Calculator is a dashboard that shows the current cost of your Kubernetes cluster and the projected cost of running an equivalent cluster on Nodeless Kubernetes. The projected cost is calculated by chosing an instance type for each pod based on the resource requests and limits specified in the pod spec.
 
 ## Installation
 
@@ -32,3 +24,11 @@ Set environment variables (modify if necessary) and apply the manifests:
 ## Uninstall
 
     kubectl -n$NAMESPACE delete Deployment,ServiceAccount,ClusterRole,ClusterRoleBinding -l app.kubernetes.io/name=nodeless-cost-calculator
+
+## Unsupported features
+
+* Reserved instance pricing
+* Custom cloud pricing
+* Storage costs
+* Network costs
+* Cost of nodes with GPU instances
