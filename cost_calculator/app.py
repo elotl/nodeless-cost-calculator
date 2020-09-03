@@ -135,6 +135,8 @@ class Node:
     @classmethod
     def from_k8s(cls, node):
         name = node.metadata.name
+        instance_type = node.metadata.labels.get(
+            'beta.kubernetes.io/instance-type', '')
         if cloud_provider == 'gce':
             nodegroup = node.metadata.labels.get(
                 'alpha.eksctl.io/nodegroup-name', '')
@@ -144,8 +146,6 @@ class Node:
             if not nodegroup:
                 nodegroup = node.metadata.labels.get(
                     'alpha.eksctl.io/nodegroup-name', '')
-        instance_type = node.metadata.labels.get(
-            'beta.kubernetes.io/instance-type', '')
         return cls(name, nodegroup, '', '', '', instance_type, 0.0)
 
 

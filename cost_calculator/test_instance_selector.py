@@ -20,6 +20,32 @@ class TestInstanceSelector(unittest.TestCase):
         for case in cases:
             self.assert_matches(*case)
 
+    def test_price_for_gce_custom_instance(self):
+        cases = [
+            ('n1', 2, 3.75, 0.033174*2 + 0.004446 * 3.75),
+            ('e2', 2, 4.0, 2*0.02289 + 4.0*0.003068),
+        ]
+        instance_selector = make_instance_selector(
+            datadir, 'gce', 'us-west1-a')
+        for family, cpu, gb_memory, expected_price in cases:
+            price = instance_selector.price_for_gce_custom_instance(
+                family, cpu, gb_memory)
+            assert price is not None, 'Inst type should not be none'
+            self.assertEqual(price, expected_price, 'price does not match expected price')
+
+    def test_gce_spec_for_inst_type(self):
+        cases = [
+            ('custom-1-1024', 1, 1.0),
+            ('custom-2-3840', 2, 3.75),
+        ]
+        instance_selector = make_instance_selector(
+            datadir, 'gce', 'us-west1-a')
+        for inst_type, cpu, gb_memory in cases:
+            inst = instance_selector.spec_for_inst_type(inst_type)
+            assert inst is not None, 'instance should not be nil'
+            self.assertEqual(inst['cpu'], cpu)
+            self.assertEqual(inst['memory'], gb_memory)
+
     def test_gce(self):
         cases = [
             (0, 3.75, '1', 'n1-standard-1'),

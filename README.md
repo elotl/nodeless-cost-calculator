@@ -8,6 +8,7 @@ Unsupported features:
 * Custom cloud pricing
 * Storage costs
 * Network costs
+* Cost of nodes with GPU instances
 
 ## Installation
 

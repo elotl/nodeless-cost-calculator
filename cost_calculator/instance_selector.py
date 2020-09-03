@@ -34,6 +34,26 @@ def cheapest_custom_instance(cid, cpu_request, memory_request):
     return custom_cpus, custom_memory, custom_price
 
 
+def parse_gce_custom_machine(inst_type):
+    try:
+        parts = inst_type.split('-')
+        # gce will label an n1-custom node without the family
+        # part of the name. e.g. custom-2-3840
+        if inst_type.startswith('custom'):
+            family = 'n1'
+            cpu_str = parts[1]
+            memory_str = parts[2]
+        else:
+            family = parts[0]
+            cpu_str = parts[2]
+            memory_str = parts[3]
+        cpu = int(cpu_str)
+        gb_memory = int(memory_str) / 1024.0
+        return family, cpu, gb_memory
+    except Exception:
+        return '', 0, 0.0
+
+
 class InstanceSelector(object):
     def __init__(self, cloud, region,
                  inst_data_by_region, custom_inst_data_by_region):
@@ -42,9 +62,35 @@ class InstanceSelector(object):
         self.custom_data = custom_inst_data_by_region.get(region, {})
 
     def spec_for_inst_type(self, inst_type):
-        for inst in self.inst_data:
-            if inst_type == inst["instanceType"]:
-                return inst
+        if 'custom' in inst_type:
+            family, cpu, gb_memory = parse_gce_custom_machine(inst_type)
+            if cpu == 0 or gb_memory == 0:
+                return None
+            price = self.price_for_gce_custom_instance(family, cpu, gb_memory)
+            if price is None:
+                return None
+            return {
+                'instanceType':      inst_type,
+                'price':             price,
+                'gpu':               0,
+                'supportedGPUTypes': [],
+                'memory':            gb_memory,
+                'cpu':               cpu,
+                'burstable':         False,
+                'baseline':          cpu,
+            }
+        else:
+            for inst in self.inst_data:
+                if inst_type == inst["instanceType"]:
+                    return inst
+
+    def price_for_gce_custom_instance(self, family, cpu, gb_memory):
+        for data in self.custom_data:
+            if family != data['instanceFamily']:
+                continue
+            return (cpu * data['pricePerCPU'] +
+                    gb_memory * data['pricePerGBOfMemory'])
+        return None
 
     def price_for_cpu_spec(self, cpu, inst):
         if not inst['burstable']:
