@@ -137,6 +137,9 @@ class Node:
         name = node.metadata.name
         instance_type = node.metadata.labels.get(
             'beta.kubernetes.io/instance-type', '')
+        if not instance_type:
+            instance_type = node.metadata.labels.get(
+                'kubernetes.io/instance-type', '')
         if cloud_provider == 'gce':
             nodegroup = node.metadata.labels.get(
                 'alpha.eksctl.io/nodegroup-name', '')
