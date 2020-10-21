@@ -15,9 +15,25 @@ Follow these instructions to install the Nodeless Cost Calculator from the comma
 
 Set environment variables (modify if necessary) and apply the manifests:
 
+**AWS**
+
     export NAMESPACE=default
-    export CLOUD_PROVIDER=aws  # must be one of 'aws' or 'gce'
+    export CLOUD_PROVIDER=aws
     export REGION=us-east-1
+
+**GCE**
+
+    export NAMESPACE=default
+    export CLOUD_PROVIDER=gce
+    export REGION=us-east1
+
+**Azure**
+
+    export NAMESPACE=default
+    export CLOUD_PROVIDER=azure
+    export REGION="East US"
+
+**Apply Manifests**
 
     envsubst < manifests.yaml | kubectl apply -f -
 
