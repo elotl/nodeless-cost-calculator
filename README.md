@@ -33,6 +33,8 @@ Set environment variables (modify if necessary) and apply the manifests:
     export CLOUD_PROVIDER=azure
     export REGION="East US"
 
+**Apply Manifests**
+
     envsubst < manifests.yaml | kubectl apply -f -
 
 Once the nodeless-cost-calculator deployment is running, the easiest way to connect to the pod is to use `kubectl port-forward`
