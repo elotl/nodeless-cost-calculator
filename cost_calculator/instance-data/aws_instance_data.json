@@ -7297,6 +7297,15 @@
             "cpu": 8
         },
         {
+            "baseline": 8,
+            "generation": "current",
+            "price": 0.476,
+            "memory": 32.0,
+            "instanceType": "m5n.2xlarge",
+            "gpu": 0,
+            "cpu": 8
+        },
+        {
             "baseline": 16,
             "generation": "current",
             "price": 0.768,
