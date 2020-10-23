@@ -7302,6 +7302,7 @@
             "price": 0.476,
             "memory": 32.0,
             "instanceType": "m5n.2xlarge",
+            "bustable": false,
             "gpu": 0,
             "cpu": 8
         },
