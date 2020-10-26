@@ -8,7 +8,10 @@ from instance_selector import (
 )
 from kubernetes.client.models import V1Node, V1NodeList, V1ObjectMeta
 
+os.environ['IS_TEST_SUITE'] = 'yes'
 from cost_calculator.app import ClusterCost, KIP_NODE_LABEL_KEY, KIP_NODE_LABEL_VALUE
+
+
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 datadir = os.path.join(scriptdir, 'instance-data')
@@ -68,9 +71,9 @@ class TestInstanceSelector(unittest.TestCase):
 
     def test_aws(self):
         cases = [
-            (0, 0, '1', 'p2.xlarge'),
-            (32, 15, '0', 'c5.9xlarge'),
-            (48, 180, '', 'm5.12xlarge'),
+            (0, 0, '1', 'g4dn.xlarge'),
+            (32, 15, '0', 'c6g.8xlarge'),
+            (48, 180, '', 'm6g.12xlarge'),
         ]
         self.run_instance_test('aws', 'us-east-1', cases)
 
