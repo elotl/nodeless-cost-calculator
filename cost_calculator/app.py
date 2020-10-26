@@ -413,6 +413,6 @@ if not region:
         'REGION environment variable is required. '
         'Please restart this pod with a REGION environment variable set.')
     sys.exit(1)
-if __name__ == '__main__':
-    cluster_cost_calculator = make_cluster_cost_calculator(
-        kubeconfig, cloud_provider, region)
+
+cluster_cost_calculator = make_cluster_cost_calculator(
+    kubeconfig, cloud_provider, region)
