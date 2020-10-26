@@ -15,8 +15,8 @@ logger.setLevel(logging.DEBUG)
 WEEK = 'week'
 MONTH = 'month'
 YEAR = 'year'
-KIP_NODE_LABEL_KEY = 'app'
-KIP_NODE_LABEL_VALUE = 'kip-provider'
+KIP_NODE_LABEL_KEY = 'type'
+KIP_NODE_LABEL_VALUE = 'virtual-kubelet'
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
