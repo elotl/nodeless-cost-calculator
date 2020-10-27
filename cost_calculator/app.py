@@ -15,6 +15,8 @@ logger.setLevel(logging.DEBUG)
 WEEK = 'week'
 MONTH = 'month'
 YEAR = 'year'
+KIP_NODE_LABEL_KEY = 'type'
+KIP_NODE_LABEL_VALUE = 'virtual-kubelet'
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -221,8 +223,16 @@ class ClusterCost:
 
     def get_nodes(self):
         nodes = self.core_client.list_node()
-        print('num worker nodes', len(nodes.items))
-        return [Node.from_k8s(node) for node in nodes.items]
+        filtered_nodes = self._filter_kip_nodes(nodes)
+        print('num worker nodes', len(filtered_nodes))
+        return [Node.from_k8s(node) for node in filtered_nodes]
+
+    def _filter_kip_nodes(self, nodes):
+        filtered_nodes = [
+            node for node in nodes.items
+            if not node.metadata.labels.get(KIP_NODE_LABEL_KEY, '') == KIP_NODE_LABEL_VALUE
+        ]
+        return filtered_nodes
 
 
 def make_cluster_cost_calculator(kubeconfig, cloud_provider, region):
@@ -403,5 +413,6 @@ if not region:
         'REGION environment variable is required. '
         'Please restart this pod with a REGION environment variable set.')
     sys.exit(1)
+
 cluster_cost_calculator = make_cluster_cost_calculator(
     kubeconfig, cloud_provider, region)

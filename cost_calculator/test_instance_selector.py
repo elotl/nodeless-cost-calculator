@@ -1,9 +1,14 @@
 import os
 import unittest
+from unittest.mock import Mock
+
 from instance_selector import (
     make_instance_selector,
     cheapest_custom_instance,
 )
+from kubernetes.client.models import V1Node, V1NodeList, V1ObjectMeta
+
+from cost_calculator.app import ClusterCost, KIP_NODE_LABEL_KEY, KIP_NODE_LABEL_VALUE
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 datadir = os.path.join(scriptdir, 'instance-data')
@@ -104,6 +109,52 @@ class TestInstanceSelector(unittest.TestCase):
             self.assertEqual(memory, expected_memory)
             if cpu is not None:
                 self.assertEqual(price, expected_price)
+
+
+class TestClusterCost(unittest.TestCase):
+    def test_get_nodes(self):
+        # GIVEN
+        core_mock = Mock()
+        nodes_list = V1NodeList(
+            items=[
+                V1Node(
+                    api_version='v1',
+                    kind='Node',
+                    metadata=V1ObjectMeta(
+                        name='kip-node',
+                        labels={KIP_NODE_LABEL_KEY: KIP_NODE_LABEL_VALUE}
+                    )
+                ),
+                V1Node(
+                    api_version='v1',
+                    kind='Node',
+                    metadata=V1ObjectMeta(
+                        name='other-node',
+                        labels={KIP_NODE_LABEL_KEY: 'other-value'}
+                    )
+                ),
+                V1Node(
+                    api_version='v1',
+                    kind='Node',
+                    metadata=V1ObjectMeta(
+                        name='other-node-2',
+                        labels={'other-key': 'other-value'}
+                    )
+                ),
+
+            ])
+        nodes_list.items = nodes_list.items
+        core_mock.list_node.return_value = nodes_list
+        cluster_cost = ClusterCost(core_mock, Mock())
+        physical_nodes = ['other-node', 'other-node-2']
+
+        # WHEN
+        nodes = cluster_cost.get_nodes()
+
+        # THEN
+        for node in nodes:
+            self.assertNotEqual(node.name, 'kip-node')
+            self.assertIn(node.name, physical_nodes)
 
 
 if __name__ == '__main__':
