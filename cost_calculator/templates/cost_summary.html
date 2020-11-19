@@ -30,9 +30,9 @@
       </tr>
       <tbody>
         {% for pod in data.pods %}
-            {% if pod.req_cpu|round(2)|e == 0 and pod.lim_cpu|round(2)|e == 0%}
-                {% if pod.req_memory|round(2)|e == 0 and pod.lim_memory|round(2)|e == 0  %}
-         <tr style="background-color:#FF0000">
+            {% if pod.req_cpu == 0 and pod.lim_cpu == 0 %}
+                {% if pod.req_memory == 0 and pod.lim_memory == 0 %}
+         <tr style="background-color:#e0ce47">
                 {% endif %}
             {% else %}
          <tr>
@@ -52,7 +52,8 @@
     </thead>
   </table>
   <p>
-    <strong>Note:</strong> Nodeless cost is projected based on cpu and memory resource requests and limits for the applications running on the cluster. Projected cost uses on-demand instance price by default. Spot projections coming soon!
+    <strong>Note:</strong> Nodeless cost is projected based on cpu and memory resource requests and limits for the applications running on the cluster. Projected cost uses on-demand instance price by default. If row is yellow, it means that resource requirements are not defined for given pod.
+      This may falsify calculations and it's consider bad practice. Please set those and come back to get more accurate forecast!
   </p>
   <form action="" method="POST">
     <label for="timeframes">Timeframe</label>
