@@ -20,19 +20,29 @@
       <!-- NAME      UNITS     RUNNING   STATUS    RESTARTS   NODE      IP        AGE-->
       <tr> <th>Namespace</th>
         <th>Name</th>
-        <th>CPU</th>
-        <th>Memory</th>
+        <th>CPU (request)</th>
+        <th>Memory (request)</th>
+        <th>CPU (limits)</th>
+        <th>Memory (limits)</th>
         <th>GPU</th>
         <th>Instance Type</th>
         <th>Hourly Cost</th>
       </tr>
       <tbody>
         {% for pod in data.pods %}
-        <tr>
+            {% if pod.req_cpu|round(2)|e == 0 and pod.lim_cpu|round(2)|e == 0%}
+                {% if pod.req_memory|round(2)|e == 0 and pod.lim_memory|round(2)|e == 0  %}
+         <tr style="background-color:#FF0000">
+                {% endif %}
+            {% else %}
+         <tr>
+            {% endif %}
           <td>{{ pod.namespace|e }}</td>
           <td>{{ pod.name|e }}</td>
-          <td>{{ pod.cpu|round(2)|e }}</td>
-          <td>{{ pod.memory|round(2)|e }}</td>
+          <td>{{ pod.req_cpu|round(2)|e }}</td>
+          <td>{{ pod.req_memory|round(2)|e }}</td>
+          <td>{{ pod.lim_cpu|round(2)|e }}</td>
+          <td>{{ pod.lim_memory|round(2)|e }}</td>
           <td>{{ pod.gpu }}</td>
           <td>{{ pod.instance_type }}</td>
           <td>{{ pod.cost }}</td>
