@@ -174,12 +174,12 @@ class InstanceSelector(object):
         if self.cloud == 'azure':
             region = self.region.replace(" ", "").lower()
             redis_key = key_pattern.format(region=region, instance_type=instance_type)
-            logging.info(f"trying to get data from redis under key: {redis_key}")
+            print(f"trying to get data from redis under key: {redis_key}")
         prices_bytes = self.redis.get(redis_key)
         prices_str = prices_bytes.decode('utf-8')
         if "null" in prices_str:
             prices_str = prices_str.replace("null","{}")
-        logging.info(f"got raw data: {prices_str}")
+        print(f"got raw data: {prices_str}")
         try:
             prices = ast.literal_eval(prices_str)
         except ValueError:

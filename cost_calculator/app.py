@@ -277,6 +277,7 @@ def cost_summary():
     namespace = ''
     data = {
         'pod_cost': 0,
+        'pod_spot_cost': 0,
         'pod_count': 0,
         'pod_total_cpu': 0,
         'pod_total_memory': 0,
@@ -285,7 +286,9 @@ def cost_summary():
         'node_total_cpu': 0,
         'node_total_memory': 0,
         'savings': 0,
+        'savings_for_spot': 0,
         'savings_percentage': 0,
+        'savings_spot_percentage': 0,
         'selected_timeframe': '',
         'timeframes': [WEEK, MONTH, YEAR]
     }
@@ -322,7 +325,7 @@ def cost_summary():
     data['node_count'] = len(nodes)
     data['pod_count'] = len(pods)
     data['savings'] = round(data['node_cost'] - data['pod_cost'], 2)
-    data['saving_for_spot'] = round(data['node_cost'] - data['pod_spot_cost'], 2)
+    data['savings_for_spot'] = round(data['node_cost'] - data['pod_spot_cost'], 2)
     if data['node_cost'] != 0:
         data['savings_percentage'] = round((data['savings'] / data['node_cost']) * 100, 2)
         data['savings_spot_percentage'] = round((data['savings'] / data['node_cost']) * 100, 2)
