@@ -406,7 +406,6 @@ def forcast_summary():
     data['spot_cost'] = cluster_cost_calculator.get_total_nodeless_cost(
         namespace, timeframe, cost_field='spot_price'
     )
-    data['spot_cost'] = cluster_cost_calculator.get_nodeless_pods(namespace, timeframe)
     data['pod_count'] = len(data['pods'])
 
     return flask.render_template('cost_summary.html', data=data)
