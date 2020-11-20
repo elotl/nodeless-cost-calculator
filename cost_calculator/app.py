@@ -215,7 +215,7 @@ class ClusterCost:
                 pod.no_resource_spec = True
         return pods
 
-    def get_total_nodeless_cost(self, namespace, num_hours, pod_name=''):
+    def get_total_nodeless_cost(self, namespace, num_hours, pod_name='', cost_field='cost'):
         if namespace == 'all':
             namespace = ''
         pod_list = self.get_nodeless_pods(namespace)
@@ -224,12 +224,14 @@ class ClusterCost:
                 if pod.name != pod_name:
                     continue
                 else:
-                    return round(pod.cost * num_hours, 3)
+                    cost = getattr(pod, cost_field)
+                    return round(cost * num_hours, 3)
         else:
             # get monthly cost for all pods in aggregate
             cost = 0.0
             for pod in pod_list:
-                cost += pod.cost
+                pod_cost = getattr(pod, cost_field)
+                cost += pod_cost
             return round(cost * num_hours, 3)
 
     def pod_costs(self, namespace):
@@ -307,6 +309,7 @@ def cost_summary():
             data['node_total_memory'] += node.memory
     for pod in pods:
         data['pod_cost'] += pod.cost
+        data['pod_spot_cost'] += pod.spot_price
         data['pod_total_cpu'] += max(pod.req_cpu, pod.lim_cpu)
         data['pod_total_memory'] += max(pod.req_memory, pod.lim_memory)
     if invalid_nodes:
@@ -315,12 +318,14 @@ def cost_summary():
                   ', '.join(invalid_nodes)))
     data['node_cost'] = round(data['node_cost'] * timeframe, 2)
     data['pod_cost'] = round(data['pod_cost'] * timeframe, 2)
+    data['pod_spot_cost'] = round(data['pod_spot_cost'] * timeframe, 2)
     data['node_count'] = len(nodes)
     data['pod_count'] = len(pods)
     data['savings'] = round(data['node_cost'] - data['pod_cost'], 2)
+    data['saving_for_spot'] = round(data['node_cost'] - data['pod_spot_cost'], 2)
     if data['node_cost'] != 0:
-        data['savings_percentage'] = round(
-            (data['savings'] / data['node_cost']) * 100, 2)
+        data['savings_percentage'] = round((data['savings'] / data['node_cost']) * 100, 2)
+        data['savings_spot_percentage'] = round((data['savings'] / data['node_cost']) * 100, 2)
     return flask.render_template('comparison.html', data=data)
 
 
@@ -393,7 +398,12 @@ def forcast_summary():
 
     print('namespace: ', namespace)
     data['cost'] = cluster_cost_calculator.get_total_nodeless_cost(
-        namespace, timeframe)
+        namespace, timeframe
+    )
+    data['spot_cost'] = cluster_cost_calculator.get_total_nodeless_cost(
+        namespace, timeframe, cost_field='spot_price'
+    )
+    data['spot_cost'] = cluster_cost_calculator.get_nodeless_pods(namespace, timeframe)
     data['pod_count'] = len(data['pods'])
 
     return flask.render_template('cost_summary.html', data=data)
