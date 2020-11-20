@@ -1,6 +1,6 @@
 import os
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from instance_selector import (
     make_instance_selector,
@@ -95,9 +95,11 @@ class TestInstanceSelector(unittest.TestCase):
         self.assertEqual(inst_type, expected, msg)
 
     def run_instance_test(self, cloud, region, cases):
-        self.instance_selector = make_instance_selector(datadir, cloud, region)
-        for case in cases:
-            self.assert_matches(*case)
+        with patch('cost_calculator.instance_selector.redis.Redis.get') as mocked_get:
+            mocked_get.return_value = b'{"onDemandPrice": 0.0252, "spotPrices": null}'
+            self.instance_selector = make_instance_selector(datadir, cloud, region)
+            for case in cases:
+                self.assert_matches(*case)
 
     def test_price_for_gce_custom_instance(self):
         cases = [
