@@ -178,7 +178,10 @@ class InstanceSelector(object):
         prices_bytes = self.redis.get(redis_key)
         prices_str = prices_bytes.decode('utf-8')
         logging.info(f"got raw data: {prices_str}")
-        prices = ast.literal_eval(prices_str)
+        try:
+            prices = ast.literal_eval(prices_str)
+        except ValueError:
+            raise ValueError(f"cannot convert {prices_str} (got from redis key {redis_key}) to dict")
         return min(prices['spotPrices'].values())
 
     def get_cheapest_instance(self, cpu_request, memory_request, gpu_spec):
