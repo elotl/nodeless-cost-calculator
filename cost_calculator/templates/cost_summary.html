@@ -26,7 +26,8 @@
         <th>Memory (limits)</th>
         <th>GPU</th>
         <th>Instance Type</th>
-        <th>Hourly Cost</th>
+        <th>Hourly On-demand Cost</th>
+        <th>Hourly Spot Cost</th>
       </tr>
       <tbody>
         {% for pod in data.pods %}
@@ -46,6 +47,7 @@
           <td>{{ pod.gpu }}</td>
           <td>{{ pod.instance_type }}</td>
           <td>{{ pod.cost }}</td>
+          <td>{{ pod.spot_cost }}</td>
         </tr>
         {% endfor %}
       </tbody>

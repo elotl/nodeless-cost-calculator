@@ -114,6 +114,7 @@ class Pod:
     gpu_spec = attr.ib()
     instance_type = attr.ib(default='')
     cost = attr.ib(default=0.0)
+    spot_price = attr.ib(default=0.0)
 
     @classmethod
     def from_k8s(cls, kpod):
@@ -209,7 +210,7 @@ class ClusterCost:
         for pod in pods:
             cpu = max(pod.lim_cpu, pod.req_cpu)
             memory = max(pod.lim_memory, pod.req_memory)
-            pod.instance_type, pod.cost = self.instance_selector.get_cheapest_instance(cpu, memory, pod.gpu_spec)
+            pod.instance_type, pod.cost, pod.spot_price = self.instance_selector.get_cheapest_instance(cpu, memory, pod.gpu_spec)
             if cpu == 0 and memory == 0:
                 pod.no_resource_spec = True
         return pods
