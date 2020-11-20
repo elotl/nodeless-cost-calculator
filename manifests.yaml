@@ -73,3 +73,37 @@ spec:
               value: ${CLOUD_PROVIDER}
             - name: REGION
               value: ${REGION}
+        - name: redis
+          image: redis
+          ports:
+            - containerPort: 6379
+              name: redis
+              protocol: TCP
+        - name: cloudinfo
+          image: banzaicloud/cloudinfo
+          env:
+            - name: CLOUDINFO_LOG_FORMAT
+              value: text
+#            - name: CLOUDINFO_PROVIDER_AZURE_ENABLED
+#              value: "true"
+#            - name: AZURE_SUBSCRIPTION_ID
+#              value: set your sub id here
+#            - name: AZURE_TENANT_ID
+#              value: set your tenant id here
+#            - name: AZURE_CLIENT_ID
+#              value: set your client id here
+#            - name: AZURE_CLIENT_SECRET
+#              value: set your client secret here
+            - name: CLOUDINFO_STORE_REDIS_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+#          readinessProbe:
+#            httpGet:
+#              port: 8000
+#               you need to set provider (azure, amazon, goole) and region here
+#              path: /api/v1/providers/azure/services/compute/regions/eastus/products
+#            initialDelaySeconds: 120
+#            periodSeconds: 60
+#            timeoutSeconds: 1200
