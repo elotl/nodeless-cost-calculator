@@ -89,7 +89,7 @@ class TestUtils(unittest.TestCase):
 
 class TestInstanceSelector(unittest.TestCase):
     def assert_matches(self, cpu, memory, gpu, expected):
-        inst_type, _ = self.instance_selector.get_cheapest_instance(cpu, memory, gpu)
+        inst_type, _, _ = self.instance_selector.get_cheapest_instance(cpu, memory, gpu)
         msg = f'{self.instance_selector.cloud}: {cpu}, {memory}, {gpu} != expected {expected}, got {inst_type}'
         print(msg)
         self.assertEqual(inst_type, expected, msg)

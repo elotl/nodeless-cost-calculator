@@ -170,11 +170,14 @@ class InstanceSelector(object):
         return supported_gpus >= gpu_count
 
     def get_spot_price(self, instance_type):
-        key_pattern = "/banzaicloud.com/cloudinfo/providers/azure/regions/{region}/prices/{instance_type}"
+        if self.redis is None:
+            return 100000000.0
+        key_pattern = "/banzaicloud.com/cloudinfo/providers/{provider}/regions/{region}/prices/{instance_type}"
+        region = self.region
         if self.cloud == 'azure':
             region = self.region.replace(" ", "").lower()
-            redis_key = key_pattern.format(region=region, instance_type=instance_type)
-            print(f"trying to get data from redis under key: {redis_key}")
+        redis_key = key_pattern.format(provider=self.cloud, region=region, instance_type=instance_type)
+        print(f"trying to get data from redis under key: {redis_key}")
         prices_bytes = self.redis.get(redis_key)
         prices_str = prices_bytes.decode('utf-8')
         if "null" in prices_str:
@@ -233,7 +236,9 @@ def make_instance_selector(datadir, cloud_provider, region):
         with open(filepath) as fp:
             jsonstr = fp.read()
             custom_inst_data_by_region = json.loads(jsonstr)
-    redis_client = redis.Redis("localhost", 6379)
+    redis_client = None
+    if os.getenv("GET_SPOT", False):
+        redis_client = redis.Redis("localhost", 6379)
     return InstanceSelector(
         cloud_provider,
         region,
