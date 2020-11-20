@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 from instance_selector import (
     make_instance_selector,
     cheapest_custom_instance,
+    PriceGetter
 )
 from kubernetes.client.models import V1Node, V1NodeList, V1ObjectMeta, V1Pod, V1PodSpec, V1Container, \
     V1ResourceRequirements
@@ -231,6 +232,49 @@ class TestClusterCost(unittest.TestCase):
         for node in nodes:
             self.assertNotEqual(node.name, 'kip-node')
             self.assertIn(node.name, physical_nodes)
+
+
+class RedisMock:
+    def __init__(self, store):
+        self.store = store
+
+    def get(self, key):
+        return self.store.get(key)
+
+
+class TestPriceGetter(unittest.TestCase):
+    def test_get_spot_price(self):
+        cases = [
+            {
+                "store": {
+                    "/banzaicloud.com/cloudinfo/providers/azure/regions/eastus/prices/Standard_B1ls": b'{"onDemandPrice": 0.0252, "spotPrice": null}'
+                },
+                "instanceType": "Standard_B1ls",
+                "region": "East US",
+                "expected_price": 0.0252
+            },
+            {
+                "store": {
+                    "/banzaicloud.com/cloudinfo/providers/azure/regions/eastus/prices/Standard_B1ls": b'{"onDemandPrice": 0.0252}'
+                },
+                "instanceType": "Standard_B1ls",
+                "region": "East US",
+                "expected_price": 0.0252
+            },
+            {
+                "store": {
+                    "/banzaicloud.com/cloudinfo/providers/azure/regions/eastus/prices/Standard_B1ls": b'{"onDemandPrice": 0.0252, "spotPrices": {"subregion1": 0.024, "subregion2": 0.0001}}'
+                },
+                "instanceType": "Standard_B1ls",
+                "region": "East US",
+                "expected_price": 0.0001
+            },
+        ]
+        for case in cases:
+            redis_client = RedisMock(store=case['store'])
+            price_getter = PriceGetter(provider='azure', redis_client=redis_client)
+            spot_price = price_getter.get_spot_price(instance_type=case['instanceType'], region=case['region'])
+            self.assertEqual(spot_price, case['expected_price'])
 
 
 if __name__ == '__main__':

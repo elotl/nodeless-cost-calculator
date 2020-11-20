@@ -205,6 +205,12 @@ class InstanceSelector(object):
 
 
 class PriceGetter:
+    provider_keys_map = {
+        "azure": "azure",
+        "aws": "amazon",
+        "gce": "google"
+    }
+
     def __init__(self, provider, redis_client):
         self.provider = provider
         self.redis_client = redis_client
@@ -214,9 +220,10 @@ class PriceGetter:
         return region.replace(" ", "").lower()
 
     def _get_key(self, instance_type, region):
-        if self.provider == "azure":
+        provider = self.provider_keys_map[self.provider]
+        if provider == "azure":
             region = self._get_azure_region_key(region)
-        return self.key_pattern.format(provider=self.provider, region=region, instance_type=instance_type)
+        return self.key_pattern.format(provider=provider, region=region, instance_type=instance_type)
 
     def _convert_entry_to_dict(self, data):
         prices_str = data.decode('utf-8')
@@ -230,17 +237,14 @@ class PriceGetter:
         return prices
 
     def _get_lowest_spot_price(self, prices):
-        spot_prices = prices.get("sportPrices")
-        if spot_prices is None:
-            # no spotPrices found, get on-demand price
-            return prices['onDemandPrice']
-        if len(spot_prices.values()):
+        spot_prices = prices.get("spotPrices")
+        if spot_prices is None or len(spot_prices.values()) == 0:
             # no spotPrices found, get on-demand price
             return prices['onDemandPrice']
         return min(spot_prices.values())
 
     def _get_data_for_instance(self, instance_type, region):
-        key = self.key_pattern.format(provider=self.provider, region=region, instance_type=instance_type)
+        key = self._get_key(region=region, instance_type=instance_type)
         data = self.redis_client.get(key)
         prices = self._convert_entry_to_dict(data)
         return prices
