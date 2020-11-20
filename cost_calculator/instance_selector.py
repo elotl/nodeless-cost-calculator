@@ -184,7 +184,7 @@ class InstanceSelector(object):
             prices = ast.literal_eval(prices_str)
         except ValueError:
             raise ValueError(f"cannot convert {prices_str} (got from redis key {redis_key}) to dict")
-        if len(prices_str['spotPrices'].values()):
+        if len(prices['spotPrices'].values()):
             # no spotPrices found, get on-demand price
             return 100000000.0
         return min(prices['spotPrices'].values())
