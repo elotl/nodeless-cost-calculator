@@ -184,10 +184,14 @@ class InstanceSelector(object):
             prices = ast.literal_eval(prices_str)
         except ValueError:
             raise ValueError(f"cannot convert {prices_str} (got from redis key {redis_key}) to dict")
-        if len(prices['spotPrices'].values()):
+        spot_prices = prices.get("sportPrices")
+        if spot_prices is None:
             # no spotPrices found, get on-demand price
             return 100000000.0
-        return min(prices['spotPrices'].values())
+        if len(spot_prices.values()):
+            # no spotPrices found, get on-demand price
+            return 100000000.0
+        return min(spot_prices.values())
 
     def get_cheapest_instance(self, cpu_request, memory_request, gpu_spec):
         gpu_count, gpu_type = self.parse_gpu_spec(gpu_spec)
