@@ -174,8 +174,11 @@ class InstanceSelector(object):
         if self.cloud == 'azure':
             region = self.region.replace(" ", "").lower()
             redis_key = key_pattern.format(region=region, instance_type=instance_type)
+            logging.info(f"trying to get data from redis under key: {redis_key}")
         prices_bytes = self.redis.get(redis_key)
-        prices = ast.literal_eval(prices_bytes.decode('utf-8'))
+        prices_str = prices_bytes.decode('utf-8')
+        logging.info(f"got raw data: {prices_str}")
+        prices = ast.literal_eval(prices_str)
         return min(prices['spotPrices'].values())
 
     def get_cheapest_instance(self, cpu_request, memory_request, gpu_spec):
