@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from typing import Dict
 
 import attr
 from kubernetes import client, config
@@ -22,50 +23,81 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 
-def k8s_container_resource_requirements(container):
+def k8s_container_resource_requirements(container) -> Dict[str, int]:
+    """
+    returns dict in format:
+     {"req_cpu": 1, "req_mem": 1, "lim_cpu": 2, "lim_mem": 2}
+    """
     try:
-        max_cpu = 0
-        max_memory = 0
+        cpu = 0
+        memory = 0
         if not container.resources:
-            return max_cpu, max_memory
+            return {
+                "req_cpu": cpu,
+                "req_mem": memory,
+                "lim_cpu": cpu,
+                "lim_mem": memory
+            }
         limits = container.resources.limits
+        lim_cpu = 0
+        lim_mem = 0
         if limits and limits.get('cpu'):
             cpu = parse_quantity(limits['cpu'])
-            max_cpu = cpu
+            lim_cpu = cpu
         if limits and limits.get('memory'):
             memory = parse_quantity(limits['memory'])
-            max_memory = memory
+            lim_mem = memory
         requests = container.resources.requests
+        req_cpu = 0
+        req_mem = 0
         if requests and requests.get('cpu'):
             cpu = parse_quantity(requests['cpu'])
-            max_cpu = max(cpu, max_cpu)
+            req_cpu = max(cpu, cpu)
         if requests and requests.get('memory'):
             memory = parse_quantity(requests['memory'])
-            max_memory = max(memory, max_memory)
-        return max_cpu, max_memory
+            req_mem = max(memory, memory)
+        return {
+                "req_cpu": req_cpu,
+                "req_mem": req_mem,
+                "lim_cpu": lim_cpu,
+                "lim_mem": lim_mem
+            }
     except Exception:
         logger.exception('Error getting resource requirements for container')
 
 
 def k8s_pod_resource_requirements(pod):
-    max_cpu = 0
-    max_memory = 0
+    max_req_cpu = 0
+    max_lim_cpu = 0
+    max_req_memory = 0
+    max_lim_memory = 0
     if pod.spec.init_containers:
         for container in pod.spec.init_containers:
-            cpu, memory = k8s_container_resource_requirements(container)
-            max_cpu = max(cpu, max_cpu)
-            max_memory = max(memory, max_memory)
-    sum_cpu = 0
-    sum_memory = 0
+            resources = k8s_container_resource_requirements(container)
+            req_cpu, req_mem = resources['req_cpu'], resources['req_mem']
+            lim_cpu, lim_mem = resources['lim_cpu'], resources['lim_mem']
+            max_req_cpu = req_cpu
+            max_lim_cpu = lim_cpu
+            max_req_memory = req_mem
+            max_lim_memory = lim_mem
+    sum_req_cpu = 0
+    sum_lim_cpu = 0
+    sum_req_memory = 0
+    sum_lim_memory = 0
     if pod.spec.containers:
         for container in pod.spec.containers:
-            cpu, memory = k8s_container_resource_requirements(container)
-            sum_cpu += cpu
-            sum_memory += memory
-    max_cpu = float(max(sum_cpu, max_cpu))
-    max_memory = float(max(sum_memory, max_memory))
-    max_memory = max_memory / (1024.0 * 1024.0 * 1024.0)
-    return max_cpu, max_memory, ''
+            resources = k8s_container_resource_requirements(container)
+            sum_lim_cpu += resources['lim_cpu']
+            sum_lim_memory += resources['lim_mem']
+            sum_req_cpu += resources['req_cpu']
+            sum_req_memory += resources['req_mem']
+    max_req_cpu = float(max(sum_req_cpu, max_req_cpu))
+    max_lim_cpu = float(max(sum_lim_cpu, max_lim_cpu))
+    max_req_memory = float(max(sum_req_memory, max_req_memory))
+    max_req_memory = max_req_memory / (1024.0 * 1024.0 * 1024.0)
+    max_lim_memory = float(max(sum_lim_memory, max_lim_memory))
+    max_lim_memory = max_lim_memory / (1024.0 * 1024.0 * 1024.0)
+    return max_req_cpu, max_req_memory, max_lim_cpu, max_lim_memory, ''
 
 
 @attr.s
@@ -75,8 +107,10 @@ class Pod:
     '''
     namespace = attr.ib()
     name = attr.ib()
-    cpu = attr.ib()
-    memory = attr.ib()
+    req_cpu = attr.ib()
+    req_memory = attr.ib()
+    lim_cpu = attr.ib()
+    lim_memory = attr.ib()
     gpu_spec = attr.ib()
     instance_type = attr.ib(default='')
     cost = attr.ib(default=0.0)
@@ -86,35 +120,20 @@ class Pod:
         namespace = kpod.metadata.namespace
         name = kpod.metadata.name
         try:
-            cpu, memory, gpu_spec = k8s_pod_resource_requirements(kpod)
+            req_cpu, req_memory, lim_cpu, lim_memory, gpu_spec = k8s_pod_resource_requirements(kpod)
         except ValueError:
             logger.exception('error getting resource requirements for container')
             raise
 
-        return cls(namespace, name, cpu, memory, gpu_spec)
-
-    def find_pod_by_name(self, pod_name):
-        if self.name == pod_name:
-            return {
-                'namespace': self.namespace,
-                'name': self.name,
-                'cpu': self.cpu,
-                'memory': self.memory,
-                'gpu_spec': self.gpu_spec,
-                'instance_type': self.instance_type,
-                'cost': self.cost
-            }
-
-    def serialize(self):
-        return {
-            'namespace': self.namespace,
-            'name': self.name,
-            'cpu': self.cpu,
-            'memory': self.memory,
-            'gpu_spec': self.gpu_spec,
-            'instance_type': self.instance_type,
-            'cost': self.cost
-        }
+        return cls(
+            namespace=namespace,
+            name=name,
+            req_cpu=req_cpu,
+            req_memory=req_memory,
+            lim_cpu=lim_cpu,
+            lim_memory=lim_memory,
+            gpu_spec=gpu_spec
+        )
 
     def __str__(self):
         return f'<{self.namespace}:{self.name}, {self.instance_type}, {self.cost}>'
@@ -188,8 +207,10 @@ class ClusterCost:
     def get_nodeless_pods(self, namespace):
         pods = self.get_pods(namespace)
         for pod in pods:
-            pod.instance_type, pod.cost = self.instance_selector.get_cheapest_instance(pod.cpu, pod.memory, pod.gpu_spec)
-            if pod.cpu == 0 and pod.memory == 0:
+            cpu = max(pod.lim_cpu, pod.req_cpu)
+            memory = max(pod.lim_memory, pod.req_memory)
+            pod.instance_type, pod.cost = self.instance_selector.get_cheapest_instance(cpu, memory, pod.gpu_spec)
+            if cpu == 0 and memory == 0:
                 pod.no_resource_spec = True
         return pods
 
@@ -272,7 +293,7 @@ def cost_summary():
     period = MONTH
     timeframe = total_pods_cost(period)
     if request.method == 'POST':
-        period =  request.form.get('timeframes')
+        period = request.form.get('timeframes')
         timeframe = total_pods_cost(period)
     data['selected_timeframe'] = period
     invalid_nodes = []
@@ -285,8 +306,8 @@ def cost_summary():
             data['node_total_memory'] += node.memory
     for pod in pods:
         data['pod_cost'] += pod.cost
-        data['pod_total_cpu'] += pod.cpu
-        data['pod_total_memory'] += pod.memory
+        data['pod_total_cpu'] += max(pod.req_cpu, pod.lim_cpu)
+        data['pod_total_memory'] += max(pod.req_memory, pod.lim_memory)
     if invalid_nodes:
         flash('Error: cost summary is likely incorrect. Could not calculate '
               'node cost for the following nodes: {}'.format(
@@ -361,7 +382,7 @@ def forcast_summary():
             if pod.namespace != namespace and namespace != 'all':
                 continue
             data['pods'].append(pod)
-        period =  request.form.get('timeframes')
+        period = request.form.get('timeframes')
         if period:
             timeframe = total_pods_cost(period)
     data['selected_timeframe'] = period

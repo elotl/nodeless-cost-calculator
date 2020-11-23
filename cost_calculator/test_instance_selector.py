@@ -6,15 +6,85 @@ from instance_selector import (
     make_instance_selector,
     cheapest_custom_instance,
 )
-from kubernetes.client.models import V1Node, V1NodeList, V1ObjectMeta
+from kubernetes.client.models import V1Node, V1NodeList, V1ObjectMeta, V1Pod, V1PodSpec, V1Container, \
+    V1ResourceRequirements
 
 os.environ['IS_TEST_SUITE'] = 'yes'
-from cost_calculator.app import ClusterCost, KIP_NODE_LABEL_KEY, KIP_NODE_LABEL_VALUE
-
-
+from cost_calculator.app import ClusterCost, KIP_NODE_LABEL_KEY, KIP_NODE_LABEL_VALUE, k8s_pod_resource_requirements
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 datadir = os.path.join(scriptdir, 'instance-data')
+
+
+class TestUtils(unittest.TestCase):
+    def test_pod_resources(self):
+        cases = [
+            {
+                "pod": V1Pod(
+                    spec=V1PodSpec(
+                        init_containers=[
+                            V1Container(
+                                name="1",
+                                resources=V1ResourceRequirements(
+                                    limits={},
+                                    requests={}
+                                )
+                            )],
+                        containers=[
+                            V1Container(
+                                name="1",
+                                resources=V1ResourceRequirements(
+                                    limits={},
+                                    requests={}
+                                )
+                            ),
+                            V1Container(
+                                name="2",
+                                resources=V1ResourceRequirements(
+                                    limits={},
+                                    requests={}
+                                )
+                            )
+                        ]
+                    )),
+                # req_cpu, req_memory, lim_cpu, lim_memory, gpu_spec
+                "expected": (0, 0, 0, 0, '')
+            },
+            {
+                "pod": V1Pod(
+                    spec=V1PodSpec(
+                        init_containers=[
+                            V1Container(
+                                name="1",
+                                resources=V1ResourceRequirements(
+                                    limits={"cpu": "1", "memory": "512Mi"},
+                                    requests={"cpu": "0.5", "memory": "256Mi"}
+                                )
+                            )],
+                        containers=[
+                            V1Container(
+                                name="1",
+                                resources=V1ResourceRequirements(
+                                    limits={"cpu": "6", "memory": "6Gi"},
+                                    requests={"cpu": "3", "memory": "0.5Gi"}
+                                )
+                            ),
+                            V1Container(
+                                name="2",
+                                resources=V1ResourceRequirements(
+                                    limits={"cpu": "2", "memory": "2Gi"},
+                                    requests={"cpu": "1.5", "memory": "1Gi"}
+                                )
+                            )
+                        ]
+                    )),
+                # req_cpu, req_memory, lim_cpu, lim_memory, gpu_spec
+                "expected": (4.5, 1.5, 8.0, 8.0, '')
+            }
+        ]
+        for case in cases:
+            got = k8s_pod_resource_requirements(case['pod'])
+            self.assertEqual(got, case['expected'])
 
 
 class TestInstanceSelector(unittest.TestCase):
@@ -30,8 +100,8 @@ class TestInstanceSelector(unittest.TestCase):
 
     def test_price_for_gce_custom_instance(self):
         cases = [
-            ('n1', 2, 3.75, 0.033174*2 + 0.004446 * 3.75),
-            ('e2', 2, 4.0, 2*0.02289 + 4.0*0.003068),
+            ('n1', 2, 3.75, 0.033174 * 2 + 0.004446 * 3.75),
+            ('e2', 2, 4.0, 2 * 0.02289 + 4.0 * 0.003068),
         ]
         instance_selector = make_instance_selector(
             datadir, 'gce', 'us-west1-a')
@@ -77,27 +147,27 @@ class TestInstanceSelector(unittest.TestCase):
         ]
         self.run_instance_test('aws', 'us-east-1', cases)
 
-    # def test_azure(self):
-    #     cases = [
-    #         (0, 3.75, '1', 'n1-standard-1'),
-    #     ]
-    #     self.run_instance_test('azure', 'East US 2', cases)
+    def test_azure(self):
+        cases = [
+            (0, 0, '0', 'Standard_B1ls'),
+        ]
+        self.run_instance_test('azure', 'East US', cases)
 
     def test_cheapest_custom_instance(self):
         custom_instance_data = {
-            'baseMemoryUnit':       0.25,
+            'baseMemoryUnit': 0.25,
             'possibleNumberOfCPUs': [1.0, 2.0, 4.0, 6.0, 8.0],
-            'minimumMemoryPerCPU':  0.5,
-            'maximumMemoryPerCPU':  4.0,
-            'pricePerCPU':          0.2,
-            'pricePerGBOfMemory':   0.1,
+            'minimumMemoryPerCPU': 0.5,
+            'maximumMemoryPerCPU': 4.0,
+            'pricePerCPU': 0.2,
+            'pricePerGBOfMemory': 0.1,
         }
         cases = [
-            (6, 3, 6*0.2 + 3*0.1, 6, 3),
-            (6, 2, 3*0.1 + 6*0.2, 6, 3),
+            (6, 3, 6 * 0.2 + 3 * 0.1, 6, 3),
+            (6, 2, 3 * 0.1 + 6 * 0.2, 6, 3),
             (8.5, 2.0, None, None, None),
             (4, 32.5, None, None, None),
-            (4, 20, 20*0.1 + 6*0.2, 6, 20),
+            (4, 20, 20 * 0.1 + 6 * 0.2, 6, 20),
         ]
 
         for case in cases:
