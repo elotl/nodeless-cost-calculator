@@ -29,38 +29,38 @@ def k8s_container_resource_requirements(container) -> Dict[str, int]:
      {"req_cpu": 1, "req_mem": 1, "lim_cpu": 2, "lim_mem": 2}
     """
     try:
-        max_cpu = 0
-        max_memory = 0
+        cpu = 0
+        memory = 0
         if not container.resources:
             return {
-                "req_cpu": max_cpu,
-                "req_mem": max_memory,
-                "lim_cpu": max_cpu,
-                "lim_mem": max_memory
+                "req_cpu": cpu,
+                "req_mem": memory,
+                "lim_cpu": cpu,
+                "lim_mem": memory
             }
         limits = container.resources.limits
-        max_lim_cpu = 0
-        max_lim_mem = 0
+        lim_cpu = 0
+        lim_mem = 0
         if limits and limits.get('cpu'):
             cpu = parse_quantity(limits['cpu'])
-            max_lim_cpu = cpu
+            lim_cpu = cpu
         if limits and limits.get('memory'):
             memory = parse_quantity(limits['memory'])
-            max_lim_mem = memory
+            lim_mem = memory
         requests = container.resources.requests
-        max_req_cpu = 0
-        max_req_mem = 0
+        req_cpu = 0
+        req_mem = 0
         if requests and requests.get('cpu'):
             cpu = parse_quantity(requests['cpu'])
-            max_req_cpu = max(cpu, max_cpu)
+            req_cpu = max(cpu, cpu)
         if requests and requests.get('memory'):
             memory = parse_quantity(requests['memory'])
-            max_req_mem = max(memory, max_memory)
+            req_mem = max(memory, memory)
         return {
-                "req_cpu": max_req_cpu,
-                "req_mem": max_req_mem,
-                "lim_cpu": max_lim_cpu,
-                "lim_mem": max_lim_mem
+                "req_cpu": req_cpu,
+                "req_mem": req_mem,
+                "lim_cpu": lim_cpu,
+                "lim_mem": lim_mem
             }
     except Exception:
         logger.exception('Error getting resource requirements for container')
@@ -76,10 +76,10 @@ def k8s_pod_resource_requirements(pod):
             resources = k8s_container_resource_requirements(container)
             req_cpu, req_mem = resources['req_cpu'], resources['req_mem']
             lim_cpu, lim_mem = resources['lim_cpu'], resources['lim_mem']
-            max_req_cpu = max(req_cpu, max_req_cpu)
-            max_lim_cpu = max(lim_cpu, max_lim_cpu)
-            max_req_memory = max(req_mem, max_req_memory)
-            max_lim_memory = max(lim_mem, max_lim_memory)
+            max_req_cpu = req_cpu
+            max_lim_cpu = lim_cpu
+            max_req_memory = req_mem
+            max_lim_memory = lim_mem
     sum_req_cpu = 0
     sum_lim_cpu = 0
     sum_req_memory = 0
