@@ -9,6 +9,7 @@ Follow these instructions to install the Nodeless Cost Calculator from the comma
 ### Prerequisites
 
 - A Kubernetes cluster
+- [Kustomize](https://kustomize.io)
 
 ### Install from the command line
 
@@ -25,7 +26,7 @@ accessKey = ""
 secretKey = ""
 ```
 and then run
-`kubectl -k kustomize/overlays/aws`
+`kustomize build kustomize/overlays/azure | kubectl apply -f -`
 
 #### GCE
 In GCE [config.toml](kustomize/overlays/gce/config.toml):
@@ -38,7 +39,7 @@ credentials = ""
 # project = ""
 ```
 and then run
-`kubectl -k kustomize/overlays/gce`
+`kustomize build kustomize/overlays/gce | kubectl apply -f -`
 
 #### Azure
 In Azure [config.toml](kustomize/overlays/azure/config.toml): 
@@ -51,11 +52,10 @@ clientSecret = ""
 tenantId = ""
 ```
 and then run
-`kubectl -k kustomize/overlays/azure`
+`kustomize build kustomize/overlays/azure | kubectl apply -f -`
 
-**Apply Manifests**
-
-    envsubst < manifests.yaml | kubectl apply -f -
+Scraping spot prices usually takes up to 5-7 minutes. Once it's done you should see that all containers are ready:
+`nodeless-cost-calculator-5567f8585-b9d5z   3/3     Running   0          5m8s`
 
 Once the nodeless-cost-calculator deployment is running, the easiest way to connect to the pod is to use `kubectl port-forward`
 

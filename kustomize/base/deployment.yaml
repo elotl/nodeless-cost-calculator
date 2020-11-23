@@ -10,6 +10,8 @@ spec:
     matchLabels:
       run: nodeless-cost-calculator
   replicas: 1
+  strategy:
+    type: Recreate
   template:
     metadata:
       namespace: default
@@ -21,7 +23,7 @@ spec:
       serviceAccountName: nodeless-cost-calculator
       containers:
         - name: nodeless-cost-calculator
-          image: elotl/nodeless-cost-calculator:v0.0.3-28-gf81516d-dirty
+          image: elotl/nodeless-cost-calculator:v0.0.3-37-g535a896-dirty
           ports:
             - containerPort: 5000
               protocol: TCP
@@ -38,14 +40,14 @@ spec:
               protocol: TCP
         - name: cloudinfo
           image: banzaicloud/cloudinfo
-          args: ["cloudinfo", "--scrape=true", "--config=/etc/cloudinfo/config.yaml",]
+          args: ["cloudinfo", "--scrape=true", "--config=/etc/cloudinfo/config.toml",]
           ports:
             - containerPort: 8000
               protocol: TCP
           volumeMounts:
-            - name: config
-              mountPath: /etc/cloudinfo/config.yaml
-              subPath: config.yaml
+            - name: cloudinfo-config
+              mountPath: /etc/cloudinfo/config.toml
+              subPath: config.toml
               readOnly: true
           readinessProbe:
             httpGet:
@@ -55,6 +57,6 @@ spec:
             periodSeconds: 60
             timeoutSeconds: 1200
       volumes:
-        - name: config
-          configMap:
-            name: cloudinfo-config
+        - name: cloudinfo-config
+          secret:
+            secretName: cloudinfo-config

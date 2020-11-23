@@ -263,7 +263,7 @@ class TestPriceGetter(unittest.TestCase):
             },
             {
                 "store": {
-                    "/banzaicloud.com/cloudinfo/providers/azure/regions/eastus/prices/Standard_B1ls": b'{"onDemandPrice": 0.0252, "spotPrices": {"subregion1": 0.024, "subregion2": 0.0001}}'
+                    "/banzaicloud.com/cloudinfo/providers/azure/regions/eastus/prices/Standard_B1ls": b'{"onDemandPrice": 0.0252, "spotPrice": {"subregion1": 0.024, "subregion2": 0.0001}}'
                 },
                 "instanceType": "Standard_B1ls",
                 "region": "East US",

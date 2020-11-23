@@ -8,22 +8,18 @@ metadata:
 spec:
   template:
     spec:
-      $setElementOrder/containers:
-      - name: nodeless-cost-calculator
-      - name: redis
-      - name: cloudinfo
       containers:
-      - $setElementOrder/env:
-        - name: CLOUD_PROVIDER
-        - name: REGION
+      - name: nodeless-cost-calculator
         env:
         - name: CLOUD_PROVIDER
           value: gce
         - name: REGION
           value: "us-east1"
-        image: elotl/nodeless-cost-calculator
-        name: nodeless-cost-calculator
       - name: cloudinfo
         readinessProbe:
           httpGet:
             path: /api/v1/providers/google/services/compute/regions/us-east1/products
+      volumes:
+        - name: cloudinfo-config
+          secret:
+            secretName: cloudinfo-config

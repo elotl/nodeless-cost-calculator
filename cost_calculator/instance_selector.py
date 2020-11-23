@@ -237,7 +237,7 @@ class PriceGetter:
         return prices
 
     def _get_lowest_spot_price(self, prices):
-        spot_prices = prices.get("spotPrices")
+        spot_prices = prices.get("spotPrice")
         if spot_prices is None or len(spot_prices.values()) == 0:
             # no spotPrices found, get on-demand price
             return prices['onDemandPrice']

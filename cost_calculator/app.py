@@ -328,7 +328,7 @@ def cost_summary():
     data['savings_for_spot'] = round(data['node_cost'] - data['pod_spot_cost'], 2)
     if data['node_cost'] != 0:
         data['savings_percentage'] = round((data['savings'] / data['node_cost']) * 100, 2)
-        data['savings_spot_percentage'] = round((data['savings'] / data['node_cost']) * 100, 2)
+        data['savings_spot_percentage'] = round((data['savings_for_spot'] / data['node_cost']) * 100, 2)
     return flask.render_template('comparison.html', data=data)
 
 
