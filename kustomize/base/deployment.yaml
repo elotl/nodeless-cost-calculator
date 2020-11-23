@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeless-cost-calculator
+  namespace: default
+  labels:
+    app.kubernetes.io/name: nodeless-cost-calculator
+spec:
+  selector:
+    matchLabels:
+      run: nodeless-cost-calculator
+  replicas: 1
+  template:
+    metadata:
+      namespace: default
+      labels:
+        run: nodeless-cost-calculator
+        app.kubernetes.io/name: nodeless-cost-calculator
+    spec:
+      serviceAccount: nodeless-cost-calculator
+      serviceAccountName: nodeless-cost-calculator
+      containers:
+        - name: nodeless-cost-calculator
+          image: elotl/nodeless-cost-calculator:v0.0.3-28-gf81516d-dirty
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+          env:
+            - name: CLOUD_PROVIDER
+              value: azure
+            - name: REGION
+              value: East US
+        - name: redis
+          image: redis
+          ports:
+            - containerPort: 6379
+              name: redis
+              protocol: TCP
+        - name: cloudinfo
+          image: banzaicloud/cloudinfo
+          args: ["cloudinfo", "--scrape=true", "--config=/etc/cloudinfo/config.yaml",]
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudinfo/config.yaml
+              subPath: config.yaml
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              port: 8000
+              path: /api/v1/providers/azure/services/compute/regions/eastus/products
+            initialDelaySeconds: 120
+            periodSeconds: 60
+            timeoutSeconds: 1200
+      volumes:
+        - name: config
+          configMap:
+            name: cloudinfo-config

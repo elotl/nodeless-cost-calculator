@@ -9,29 +9,49 @@ Follow these instructions to install the Nodeless Cost Calculator from the comma
 ### Prerequisites
 
 - A Kubernetes cluster
-- [envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html)
 
 ### Install from the command line
 
-Set environment variables (modify if necessary) and apply the manifests:
+You need to set cloud credentials in `kustomize/overlays/<your-provider>/config.toml` and then apply those with `kubectl -k .`
+Cloud credentials are used to fetch on-demand and spot prices.
 
-**AWS**
+#### AWS
+In AWS [config.toml](kustomize/overlays/aws/config.toml)
+```toml
+region = "us-east-1"
 
-    export NAMESPACE=default
-    export CLOUD_PROVIDER=aws
-    export REGION=us-east-1
+# Static credentials
+accessKey = ""
+secretKey = ""
+```
+and then run
+`kubectl -k kustomize/overlays/aws`
 
-**GCE**
+#### GCE
+In GCE [config.toml](kustomize/overlays/gce/config.toml):
+```toml
+# base64 encoded credentials in json format (base64 encoded content of the credential file)
+credentials = ""
 
-    export NAMESPACE=default
-    export CLOUD_PROVIDER=gce
-    export REGION=us-east1
+# credentialsFile = ""
 
-**Azure**
+# project = ""
+```
+and then run
+`kubectl -k kustomize/overlays/gce`
 
-    export NAMESPACE=default
-    export CLOUD_PROVIDER=azure
-    export REGION="East US"
+#### Azure
+In Azure [config.toml](kustomize/overlays/azure/config.toml): 
+```toml
+subscriptionId = ""
+
+# Client credentials
+clientId = ""
+clientSecret = ""
+tenantId = ""
+```
+and then run
+`kubectl -k kustomize/overlays/azure`
 
 **Apply Manifests**
 
