@@ -141,14 +141,33 @@ class Pod:
     def from_file(cls, resource_dict, pod_name):
         namespace = 'unkown'
         name = pod_name
-        resource_spec = k8s_container_resource_requirements(resource_dict)
+        max_cpu = 0
+        max_memory = 0
+        limits = resource_dict.get('limits', False)
+        max_lim_cpu = 0
+        max_lim_mem = 0
+        if limits and limits.get('cpu'):
+            cpu = parse_quantity(limits['cpu'])
+            max_lim_cpu = cpu
+        if limits and limits.get('memory'):
+            memory = parse_quantity(limits['memory'])
+            max_lim_mem = memory
+        requests = resource_dict.get('requests', False)
+        max_req_cpu = 0
+        max_req_mem = 0
+        if requests and requests.get('cpu'):
+            cpu = parse_quantity(requests['cpu'])
+            max_req_cpu = max(cpu, max_cpu)
+        if requests and requests.get('memory'):
+            memory = parse_quantity(requests['memory'])
+            max_req_mem = max(memory, max_memory)
         return cls(
             namespace=namespace,
             name=name,
-            req_cpu=resource_spec['req_cpu'],
-            req_memory=resource_spec['req_mem'],
-            lim_cpu=resource_spec['lim_cpu'],
-            lim_memory=resource_spec['lim_mem'],
+            req_cpu=max_req_cpu,
+            req_memory=max_req_mem,
+            lim_cpu=max_lim_cpu,
+            lim_memory=max_lim_mem,
             gpu_spec=''
 
         )
