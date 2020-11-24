@@ -475,8 +475,11 @@ if not region:
         'Please restart this pod with a REGION environment variable set.')
     sys.exit(1)
 
+from_file = False
+if os.getenv('FROM_FILE', False):
+    from_file = True
 
 if not os.getenv('IS_TEST_SUITE', False):
     cluster_cost_calculator = make_cluster_cost_calculator(
-        kubeconfig, cloud_provider, region
+        kubeconfig, cloud_provider, region, from_file=from_file
     )
