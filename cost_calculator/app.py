@@ -282,7 +282,7 @@ class ClusterCost:
         return filtered_nodes
 
 
-def make_cluster_cost_calculator(kubeconfig, cloud_provider, region, from_file=False):
+def make_cluster_cost_calculator(kubeconfig, cloud_provider, region, from_file=False, file_path=''):
     scriptdir = os.path.dirname(os.path.realpath(__file__))
     datadir = os.path.join(scriptdir, 'instance-data')
     instance_selector = make_instance_selector(datadir, cloud_provider, region)
@@ -291,7 +291,7 @@ def make_cluster_cost_calculator(kubeconfig, cloud_provider, region, from_file=F
     else:
         config.load_incluster_config()
     if from_file:
-        with open('input_data.json', 'r') as jfile:
+        with open(file_path, 'r') as jfile:
             data = json.load(jfile)
             return ClusterCost(None, instance_selector, from_file=True, file_data=data)
     core_client = client.CoreV1Api()
@@ -478,8 +478,9 @@ if not region:
 from_file = False
 if os.getenv('FROM_FILE', False):
     from_file = True
+file_path = os.getenv('INPUT_FILE_PATH', '/app/input_data.json')
 
 if not os.getenv('IS_TEST_SUITE', False):
     cluster_cost_calculator = make_cluster_cost_calculator(
-        kubeconfig, cloud_provider, region, from_file=from_file
+        kubeconfig, cloud_provider, region, from_file=from_file, file_path=file_path
     )
