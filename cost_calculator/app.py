@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -136,6 +137,22 @@ class Pod:
             gpu_spec=gpu_spec
         )
 
+    @classmethod
+    def from_file(cls, resource_dict, pod_name):
+        namespace = 'unkown'
+        name = pod_name
+        resource_spec = k8s_container_resource_requirements(resource_dict)
+        return cls(
+            namespace=namespace,
+            name=name,
+            req_cpu=resource_spec['req_cpu'],
+            req_memory=resource_spec['req_mem'],
+            lim_cpu=resource_spec['lim_cpu'],
+            lim_memory=resource_spec['lim_mem'],
+            gpu_spec=''
+
+        )
+
     def __str__(self):
         return f'<{self.namespace}:{self.name}, {self.instance_type}, {self.cost}>'
 
@@ -189,11 +206,15 @@ class ClusterCost:
     instance_selector = attr.ib()
     cost_summary = attr.ib(default=attr.Factory(dict))
     no_resource_spec = attr.ib(default=False)
+    from_file = attr.ib(default=False)
+    file_data = attr.ib(default=None)
     hours_in_week = 168
     hours_in_month = 730
     hours_in_year = 8760
 
     def get_current_cluster_cost(self):
+        if self.from_file:
+            return []
         nodes = self.get_nodes()
         for node in nodes:
             node_spec = self.instance_selector.spec_for_inst_type(node.instance_type)
@@ -239,6 +260,8 @@ class ClusterCost:
         return jsonify(costs=[pod.cost * 100 for pod in pods])
 
     def get_pods(self, namespace):
+        if self.from_file:
+            return [Pod.from_file(resources, f"pod-{nr}") for nr, resources in enumerate(self.file_data)]
         if namespace == '':
             kpods = self.core_client.list_pod_for_all_namespaces()
         else:
@@ -259,15 +282,19 @@ class ClusterCost:
         return filtered_nodes
 
 
-def make_cluster_cost_calculator(kubeconfig, cloud_provider, region):
+def make_cluster_cost_calculator(kubeconfig, cloud_provider, region, from_file=False):
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+    datadir = os.path.join(scriptdir, 'instance-data')
+    instance_selector = make_instance_selector(datadir, cloud_provider, region)
     if kubeconfig:
         config.load_kube_config(config_file=kubeconfig)
     else:
         config.load_incluster_config()
+    if from_file:
+        with open('input_data.json', 'r') as jfile:
+            data = json.load(jfile)
+            return ClusterCost(None, instance_selector, from_file=True, file_data=data)
     core_client = client.CoreV1Api()
-    scriptdir = os.path.dirname(os.path.realpath(__file__))
-    datadir = os.path.join(scriptdir, 'instance-data')
-    instance_selector = make_instance_selector(datadir, cloud_provider, region)
     return ClusterCost(core_client, instance_selector)
 
 
