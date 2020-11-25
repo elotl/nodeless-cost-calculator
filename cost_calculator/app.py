@@ -59,11 +59,11 @@ def k8s_container_resource_requirements(container) -> Dict[str, int]:
             memory = parse_quantity(requests['memory'])
             max_req_mem = max(memory, max_memory)
         return {
-                "req_cpu": max_req_cpu,
-                "req_mem": max_req_mem,
-                "lim_cpu": max_lim_cpu,
-                "lim_mem": max_lim_mem
-            }
+            "req_cpu": max_req_cpu,
+            "req_mem": max_req_mem,
+            "lim_cpu": max_lim_cpu,
+            "lim_mem": max_lim_mem
+        }
     except Exception:
         logger.exception('Error getting resource requirements for container')
 
@@ -157,6 +157,19 @@ class Pod:
             "initContainers": null
           },
         """
+        containers = pod_dict['containers']
+        if containers is not None:
+            c_limits = containers.get('limits')
+            c_requests = containers.get('requests')
+        else:
+            c_limits, c_requests = {}, {}
+
+        init_containers = pod_dict['initContainers']
+        if init_containers is not None:
+            ic_limits = containers.get('limits')
+            ic_requests = containers.get('requests')
+        else:
+            ic_limits, ic_requests = {}, {}
         pod = V1Pod(
             metadata=V1ObjectMeta(
                 name=pod_dict['name'],
@@ -167,11 +180,19 @@ class Pod:
                     V1Container(
                         name='1',
                         resources=V1ResourceRequirements(
-                            limits=pod_dict['containers']
+                            limits=c_limits,
+                            requests=c_requests
                         )
                     )
                 ],
-                init_containers=[V1Container(name='1', resources=pod_dict['initContainers'])]
+                init_containers=[
+                    V1Container(
+                        name='1',
+                        resources=V1ResourceRequirements(
+                            limits=ic_limits,
+                            requests=ic_requests
+                        ))
+                ]
             )
         )
         return cls.from_k8s(pod)
@@ -254,7 +275,8 @@ class ClusterCost:
         for pod in pods:
             cpu = max(pod.lim_cpu, pod.req_cpu)
             memory = max(pod.lim_memory, pod.req_memory)
-            pod.instance_type, pod.cost, pod.spot_price = self.instance_selector.get_cheapest_instance(cpu, memory, pod.gpu_spec)
+            pod.instance_type, pod.cost, pod.spot_price = self.instance_selector.get_cheapest_instance(cpu, memory,
+                                                                                                       pod.gpu_spec)
             print(pod)
             if cpu == 0 and memory == 0:
                 pod.no_resource_spec = True
@@ -315,8 +337,8 @@ def make_cluster_cost_calculator(kubeconfig, cloud_provider, region, from_file=F
     else:
         config.load_incluster_config()
     if from_file:
-            data = _load_json_data(file_path)
-            return ClusterCost(None, instance_selector, from_file=True, file_data=data)
+        data = _load_json_data(file_path)
+        return ClusterCost(None, instance_selector, from_file=True, file_data=data)
     core_client = client.CoreV1Api()
     return ClusterCost(core_client, instance_selector)
 
@@ -374,7 +396,7 @@ def cost_summary():
     if invalid_nodes:
         flash('Error: cost summary is likely incorrect. Could not calculate '
               'node cost for the following nodes: {}'.format(
-                  ', '.join(invalid_nodes)))
+            ', '.join(invalid_nodes)))
     data['node_cost'] = round(data['node_cost'] * timeframe, 2)
     data['pod_cost'] = round(data['pod_cost'] * timeframe, 2)
     data['pod_spot_cost'] = round(data['pod_spot_cost'] * timeframe, 2)
@@ -402,7 +424,7 @@ def node_cost():
     period = MONTH
     timeframe = total_pods_cost(period)
     if request.method == 'POST':
-        period =  request.form.get('timeframes')
+        period = request.form.get('timeframes')
         if period:
             timeframe = total_pods_cost(period)
     data['selected_timeframe'] = period
