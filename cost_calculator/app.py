@@ -285,7 +285,6 @@ class ClusterCost:
             memory = max(pod.lim_memory, pod.req_memory)
             pod.instance_type, pod.cost, pod.spot_price = self.instance_selector.get_cheapest_instance(cpu, memory,
                                                                                                        pod.gpu_spec)
-            print(pod)
             if cpu == 0 and memory == 0:
                 pod.no_resource_spec = True
         return pods
@@ -307,6 +306,7 @@ class ClusterCost:
             for pod in pod_list:
                 pod_cost = getattr(pod, cost_field)
                 cost += pod_cost
+            print(f'nodeless cost for hour: {cost}')
             return round(cost * num_hours, 3)
 
     def pod_costs(self, namespace):
