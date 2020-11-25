@@ -1,0 +1,41 @@
+[
+  {
+    "name": "pod1",
+    "namespace": "default",
+    "containers": {
+      "limits": {
+        "memory": "1536Mi"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "768Mi"
+      }
+    },
+    "initContainers": null
+  },
+
+  {
+    "name": "pod2",
+    "namespace": "kube-system",
+    "containers": {
+      "limits": {
+        "cpu": "1",
+        "memory": "750Mi"
+      },
+      "requests": {
+        "cpu": "150m",
+        "memory": "250Mi"
+      }
+    },
+    "initContainers": {
+      "limits": {
+        "cpu": "1",
+        "memory": "750Mi"
+      },
+      "requests": {
+        "cpu": "150m",
+        "memory": "250Mi"
+      }
+    }
+  }
+]
