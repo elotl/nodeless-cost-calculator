@@ -6,7 +6,7 @@ from typing import Dict
 
 import attr
 from kubernetes import client, config
-from kubernetes.client import V1Pod, V1ObjectMeta, V1PodSpec, V1Container, V1ResourceRequirements
+from kubernetes.client import V1Pod, V1ObjectMeta, V1PodSpec, V1Container, V1ResourceRequirements, V1Node
 from kubernetes.utils import parse_quantity
 from flask import Flask, jsonify, request, flash
 import flask
@@ -234,6 +234,16 @@ class Node:
                     'alpha.eksctl.io/nodegroup-name', '')
         return cls(name, nodegroup, '', '', '', instance_type, 0.0)
 
+    @classmethod
+    def from_file(cls, node_dict):
+        node = V1Node(
+            metadata=V1ObjectMeta(
+                name=node_dict['name'],
+                labels=node_dict['labels']
+            ),
+        )
+        return cls.from_k8s(node)
+
 
 @attr.s
 class ClusterCost:
@@ -307,7 +317,7 @@ class ClusterCost:
 
     def get_pods(self, namespace):
         if self.from_file:
-            return [Pod.from_file(pod_dict) for pod_dict in self.file_data]
+            return [Pod.from_file(pod_dict) for pod_dict in self.file_data['pods']]
         if namespace == '':
             kpods = self.core_client.list_pod_for_all_namespaces()
         else:
@@ -315,6 +325,8 @@ class ClusterCost:
         return [Pod.from_k8s(kpod) for kpod in kpods.items]
 
     def get_nodes(self):
+        if self.from_file:
+            return [Node.from_file(node_dict) for node_dict in self.file_data['nodes']]
         nodes = self.core_client.list_node()
         filtered_nodes = self._filter_kip_nodes(nodes)
         print('num worker nodes', len(filtered_nodes))
