@@ -267,8 +267,6 @@ class ClusterCost:
     hours_in_year = 8760
 
     def get_current_cluster_cost(self):
-        if self.from_file:
-            return []
         nodes = self.get_nodes()
         for node in nodes:
             node_spec = self.instance_selector.spec_for_inst_type(node.instance_type)
