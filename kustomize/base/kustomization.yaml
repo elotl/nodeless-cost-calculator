@@ -9,3 +9,6 @@ secretGenerator:
 resources:
 - deployment.yaml
 - rbac.yaml
+- cloudinfo.yaml
+- deployment-redis.yaml
+- svc-redis.yaml

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudinfo
+  namespace: default
+  labels:
+    app.kubernetes.io/name: cloudinfo
+spec:
+  selector:
+    matchLabels:
+      run: cloudinfo
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      namespace: default
+      labels:
+        run: cloudinfo
+    spec:
+      serviceAccountName: nodeless-cost-calculator
+      containers:
+        - name: cloudinfo
+          image: banzaicloud/cloudinfo
+          args: ["cloudinfo", "--scrape=true", "--config=/etc/cloudinfo/config.toml",]
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          volumeMounts:
+            - name: cloudinfo-config
+              mountPath: /etc/cloudinfo/config.toml
+              subPath: config.toml
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              port: 8000
+              path: /api/v1/providers/azure/services/compute/regions/eastus/products
+            initialDelaySeconds: 120
+            periodSeconds: 60
+            timeoutSeconds: 1200
+      volumes:
+        - name: cloudinfo-config
+          secret:
+            secretName: cloudinfo-config

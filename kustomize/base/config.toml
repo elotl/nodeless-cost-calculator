@@ -131,7 +131,7 @@ format = "yaml"
 
 [store.redis]
 enabled = true
-host = "localhost"
+host = "redis"
 port = 6379
 
 [store.cassandra]

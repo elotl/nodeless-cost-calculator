@@ -6,6 +6,7 @@ from typing import Dict
 
 import attr
 from kubernetes import client, config
+from kubernetes.client import V1Pod, V1ObjectMeta, V1PodSpec, V1Container, V1ResourceRequirements
 from kubernetes.utils import parse_quantity
 from flask import Flask, jsonify, request, flash
 import flask
@@ -138,39 +139,42 @@ class Pod:
         )
 
     @classmethod
-    def from_file(cls, resource_dict, pod_name):
-        namespace = 'unkown'
-        name = pod_name
-        max_cpu = 0
-        max_memory = 0
-        limits = resource_dict.get('limits', False)
-        max_lim_cpu = 0
-        max_lim_mem = 0
-        if limits and limits.get('cpu'):
-            cpu = parse_quantity(limits['cpu'])
-            max_lim_cpu = cpu
-        if limits and limits.get('memory'):
-            memory = parse_quantity(limits['memory'])
-            max_lim_mem = memory
-        requests = resource_dict.get('requests', False)
-        max_req_cpu = 0
-        max_req_mem = 0
-        if requests and requests.get('cpu'):
-            cpu = parse_quantity(requests['cpu'])
-            max_req_cpu = max(cpu, max_cpu)
-        if requests and requests.get('memory'):
-            memory = parse_quantity(requests['memory'])
-            max_req_mem = max(memory, max_memory)
-        return cls(
-            namespace=namespace,
-            name=name,
-            req_cpu=max_req_cpu,
-            req_memory=max_req_mem,
-            lim_cpu=max_lim_cpu,
-            lim_memory=max_lim_mem,
-            gpu_spec=''
-
+    def from_file(cls, pod_dict):
+        """
+        expects input in format:
+          {
+            "name": "bonita-webapp-0",
+            "namespace": "default",
+            "containers": {
+              "limits": {
+                "memory": "24Gi"
+              },
+              "requests": {
+                "cpu": "3",
+                "memory": "12Gi"
+              }
+            },
+            "initContainers": null
+          },
+        """
+        pod = V1Pod(
+            metadata=V1ObjectMeta(
+                name=pod_dict['name'],
+                namespace=pod_dict['namespace']
+            ),
+            spec=V1PodSpec(
+                containers=[
+                    V1Container(
+                        name='1',
+                        resources=V1ResourceRequirements(
+                            limits=pod_dict['containers']
+                        )
+                    )
+                ],
+                init_containers=[V1Container(name='1', resources=pod_dict['initContainers'])]
+            )
         )
+        return cls.from_k8s(pod)
 
     def __str__(self):
         return f'<{self.namespace}:{self.name}, {self.instance_type}, {self.cost}>'
@@ -251,6 +255,7 @@ class ClusterCost:
             cpu = max(pod.lim_cpu, pod.req_cpu)
             memory = max(pod.lim_memory, pod.req_memory)
             pod.instance_type, pod.cost, pod.spot_price = self.instance_selector.get_cheapest_instance(cpu, memory, pod.gpu_spec)
+            print(pod)
             if cpu == 0 and memory == 0:
                 pod.no_resource_spec = True
         return pods
@@ -280,7 +285,7 @@ class ClusterCost:
 
     def get_pods(self, namespace):
         if self.from_file:
-            return [Pod.from_file(resources, f"pod-{nr}") for nr, resources in enumerate(self.file_data)]
+            return [Pod.from_file(pod_dict) for pod_dict in self.file_data]
         if namespace == '':
             kpods = self.core_client.list_pod_for_all_namespaces()
         else:
@@ -310,11 +315,16 @@ def make_cluster_cost_calculator(kubeconfig, cloud_provider, region, from_file=F
     else:
         config.load_incluster_config()
     if from_file:
-        with open(file_path, 'r') as jfile:
-            data = json.load(jfile)
+            data = _load_json_data(file_path)
             return ClusterCost(None, instance_selector, from_file=True, file_data=data)
     core_client = client.CoreV1Api()
     return ClusterCost(core_client, instance_selector)
+
+
+def _load_json_data(file_path):
+    with open(file_path, 'r') as jfile:
+        data = json.load(jfile)
+    return data
 
 
 @app.route('/', methods=['GET', 'POST'])
