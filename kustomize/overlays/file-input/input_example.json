@@ -1,0 +1,69 @@
+{
+  "pods": [
+    {
+      "name": "pod1",
+      "namespace": "default",
+      "containers": {
+        "limits": {
+          "memory": "1536Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "768Mi"
+        }
+      },
+      "initContainers": null
+    },
+    {
+      "name": "pod2",
+      "namespace": "kube-system",
+      "containers": {
+        "limits": {
+          "cpu": "1",
+          "memory": "750Mi"
+        },
+        "requests": {
+          "cpu": "150m",
+          "memory": "250Mi"
+        }
+      },
+      "initContainers": {
+        "limits": {
+          "cpu": "1",
+          "memory": "750Mi"
+        },
+        "requests": {
+          "cpu": "150m",
+          "memory": "250Mi"
+        }
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "name": "aks-agentpool-19811241-vmss00001p",
+      "labels": {
+        "agentpool": "agentpool",
+        "beta.kubernetes.io/arch": "amd64",
+        "beta.kubernetes.io/instance-type": "Standard_E4s_v3",
+        "beta.kubernetes.io/os": "linux",
+        "com.localedge/prism-viable": "true",
+        "failure-domain.beta.kubernetes.io/region": "eastus",
+        "failure-domain.beta.kubernetes.io/zone": "3",
+        "kubernetes.azure.com/cluster": "MC_hnp-localedge-prod-eastus-prod-kube2-rg_lecazrkube02_eastus",
+        "kubernetes.azure.com/node-image-version": "AKSUbuntu-1604-2020.10.28",
+        "kubernetes.azure.com/role": "agent",
+        "kubernetes.io/arch": "amd64",
+        "kubernetes.io/hostname": "aks-agentpool-19811241-vmss00001p",
+        "kubernetes.io/os": "linux",
+        "kubernetes.io/role": "agent",
+        "node-role.kubernetes.io/agent": "",
+        "node.kubernetes.io/instance-type": "Standard_E4s_v3",
+        "storageprofile": "managed",
+        "storagetier": "Premium_LRS",
+        "topology.kubernetes.io/region": "eastus",
+        "topology.kubernetes.io/zone": "3"
+      }
+    }
+  ]
+}

@@ -103,14 +103,14 @@ enabled = false
 # profile = ""
 
 [provider.azure]
-enabled = false
+enabled = true
 
-# subscriptionId = ""
+subscriptionId = ""
 
 # Client credentials
-# clientId = ""
-# clientSecret = ""
-# tenantId = ""
+clientId = ""
+clientSecret = ""
+tenantId = ""
 
 [provider.digitalocean]
 enabled = false

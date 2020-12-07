@@ -32,31 +32,5 @@ spec:
               value: azure
             - name: REGION
               value: East US
-        - name: redis
-          image: redis
-          ports:
-            - containerPort: 6379
-              name: redis
-              protocol: TCP
-        - name: cloudinfo
-          image: banzaicloud/cloudinfo
-          args: ["cloudinfo", "--scrape=true", "--config=/etc/cloudinfo/config.toml",]
-          ports:
-            - containerPort: 8000
-              protocol: TCP
-          volumeMounts:
-            - name: cloudinfo-config
-              mountPath: /etc/cloudinfo/config.toml
-              subPath: config.toml
-              readOnly: true
-          readinessProbe:
-            httpGet:
-              port: 8000
-              path: /api/v1/providers/azure/services/compute/regions/eastus/products
-            initialDelaySeconds: 120
-            periodSeconds: 60
-            timeoutSeconds: 1200
-      volumes:
-        - name: cloudinfo-config
-          secret:
-            secretName: cloudinfo-config
+            - name: REDIS_HOST
+              value: redis

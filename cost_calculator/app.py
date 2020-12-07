@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -5,6 +6,7 @@ from typing import Dict
 
 import attr
 from kubernetes import client, config
+from kubernetes.client import V1Pod, V1ObjectMeta, V1PodSpec, V1Container, V1ResourceRequirements, V1Node
 from kubernetes.utils import parse_quantity
 from flask import Flask, jsonify, request, flash
 import flask
@@ -57,11 +59,11 @@ def k8s_container_resource_requirements(container) -> Dict[str, int]:
             memory = parse_quantity(requests['memory'])
             max_req_mem = max(memory, max_memory)
         return {
-                "req_cpu": max_req_cpu,
-                "req_mem": max_req_mem,
-                "lim_cpu": max_lim_cpu,
-                "lim_mem": max_lim_mem
-            }
+            "req_cpu": max_req_cpu,
+            "req_mem": max_req_mem,
+            "lim_cpu": max_lim_cpu,
+            "lim_mem": max_lim_mem
+        }
     except Exception:
         logger.exception('Error getting resource requirements for container')
 
@@ -136,6 +138,65 @@ class Pod:
             gpu_spec=gpu_spec
         )
 
+    @classmethod
+    def from_file(cls, pod_dict):
+        """
+        expects input in format:
+          {
+            "name": "bonita-webapp-0",
+            "namespace": "default",
+            "containers": {
+              "limits": {
+                "memory": "24Gi"
+              },
+              "requests": {
+                "cpu": "3",
+                "memory": "12Gi"
+              }
+            },
+            "initContainers": null
+          },
+        """
+        containers = pod_dict['containers']
+        if containers is not None:
+            c_limits = containers.get('limits')
+            c_requests = containers.get('requests')
+        else:
+            c_limits, c_requests = {}, {}
+
+        init_containers = pod_dict['initContainers']
+        if init_containers is not None:
+            ic_limits = containers.get('limits')
+            ic_requests = containers.get('requests')
+        else:
+            ic_limits, ic_requests = {}, {}
+        pod = V1Pod(
+            metadata=V1ObjectMeta(
+                name=pod_dict['name'],
+                namespace=pod_dict['namespace']
+            ),
+            spec=V1PodSpec(
+                containers=[
+                    V1Container(
+                        name='1',
+                        resources=V1ResourceRequirements(
+                            limits=c_limits,
+                            requests=c_requests
+                        )
+                    )
+                ],
+                init_containers=[
+                    V1Container(
+                        name='1',
+                        resources=V1ResourceRequirements(
+                            limits=ic_limits,
+                            requests=ic_requests
+                        ))
+                ]
+            )
+        )
+        return cls.from_k8s(pod)
+
     def __str__(self):
         return f'<{self.namespace}:{self.name}, {self.instance_type}, {self.cost}>'
 
@@ -173,6 +234,16 @@ class Node:
                     'alpha.eksctl.io/nodegroup-name', '')
         return cls(name, nodegroup, '', '', '', instance_type, 0.0)
 
+    @classmethod
+    def from_file(cls, node_dict):
+        node = V1Node(
+            metadata=V1ObjectMeta(
+                name=node_dict['name'],
+                labels=node_dict['labels']
+            ),
+        )
+        return cls.from_k8s(node)
+
 
 @attr.s
 class ClusterCost:
@@ -189,6 +260,8 @@ class ClusterCost:
     instance_selector = attr.ib()
     cost_summary = attr.ib(default=attr.Factory(dict))
     no_resource_spec = attr.ib(default=False)
+    from_file = attr.ib(default=False)
+    file_data = attr.ib(default=None)
     hours_in_week = 168
     hours_in_month = 730
     hours_in_year = 8760
@@ -210,7 +283,8 @@ class ClusterCost:
         for pod in pods:
             cpu = max(pod.lim_cpu, pod.req_cpu)
             memory = max(pod.lim_memory, pod.req_memory)
-            pod.instance_type, pod.cost, pod.spot_price = self.instance_selector.get_cheapest_instance(cpu, memory, pod.gpu_spec)
+            pod.instance_type, pod.cost, pod.spot_price = self.instance_selector.get_cheapest_instance(cpu, memory,
+                                                                                                       pod.gpu_spec)
             if cpu == 0 and memory == 0:
                 pod.no_resource_spec = True
         return pods
@@ -232,6 +306,7 @@ class ClusterCost:
             for pod in pod_list:
                 pod_cost = getattr(pod, cost_field)
                 cost += pod_cost
+            print(f'nodeless cost for hour: {cost}')
             return round(cost * num_hours, 3)
 
     def pod_costs(self, namespace):
@@ -239,6 +314,8 @@ class ClusterCost:
         return jsonify(costs=[pod.cost * 100 for pod in pods])
 
     def get_pods(self, namespace):
+        if self.from_file:
+            return [Pod.from_file(pod_dict) for pod_dict in self.file_data['pods']]
         if namespace == '':
             kpods = self.core_client.list_pod_for_all_namespaces()
         else:
@@ -246,6 +323,8 @@ class ClusterCost:
         return [Pod.from_k8s(kpod) for kpod in kpods.items]
 
     def get_nodes(self):
+        if self.from_file:
+            return [Node.from_file(node_dict) for node_dict in self.file_data['nodes']]
         nodes = self.core_client.list_node()
         filtered_nodes = self._filter_kip_nodes(nodes)
         print('num worker nodes', len(filtered_nodes))
@@ -259,16 +338,25 @@ class ClusterCost:
         return filtered_nodes
 
 
-def make_cluster_cost_calculator(kubeconfig, cloud_provider, region):
+def make_cluster_cost_calculator(kubeconfig, cloud_provider, region, from_file=False, file_path=''):
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+    datadir = os.path.join(scriptdir, 'instance-data')
+    instance_selector = make_instance_selector(datadir, cloud_provider, region)
     if kubeconfig:
         config.load_kube_config(config_file=kubeconfig)
     else:
         config.load_incluster_config()
+    if from_file:
+        data = _load_json_data(file_path)
+        return ClusterCost(None, instance_selector, from_file=True, file_data=data)
     core_client = client.CoreV1Api()
-    scriptdir = os.path.dirname(os.path.realpath(__file__))
-    datadir = os.path.join(scriptdir, 'instance-data')
-    instance_selector = make_instance_selector(datadir, cloud_provider, region)
     return ClusterCost(core_client, instance_selector)
+
+
+def _load_json_data(file_path):
+    with open(file_path, 'r') as jfile:
+        data = json.load(jfile)
+    return data
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -318,7 +406,7 @@ def cost_summary():
     if invalid_nodes:
         flash('Error: cost summary is likely incorrect. Could not calculate '
               'node cost for the following nodes: {}'.format(
-                  ', '.join(invalid_nodes)))
+            ', '.join(invalid_nodes)))
     data['node_cost'] = round(data['node_cost'] * timeframe, 2)
     data['pod_cost'] = round(data['pod_cost'] * timeframe, 2)
     data['pod_spot_cost'] = round(data['pod_spot_cost'] * timeframe, 2)
@@ -346,7 +434,7 @@ def node_cost():
     period = MONTH
     timeframe = total_pods_cost(period)
     if request.method == 'POST':
-        period =  request.form.get('timeframes')
+        period = request.form.get('timeframes')
         if period:
             timeframe = total_pods_cost(period)
     data['selected_timeframe'] = period
@@ -448,8 +536,12 @@ if not region:
         'Please restart this pod with a REGION environment variable set.')
     sys.exit(1)
 
+from_file = False
+if os.getenv('FROM_FILE', False):
+    from_file = True
+file_path = os.getenv('INPUT_FILE_PATH', '/app/input_data.json')
 
 if not os.getenv('IS_TEST_SUITE', False):
     cluster_cost_calculator = make_cluster_cost_calculator(
-        kubeconfig, cloud_provider, region
+        kubeconfig, cloud_provider, region, from_file=from_file, file_path=file_path
     )

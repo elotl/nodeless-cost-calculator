@@ -10,6 +10,7 @@ import redis
 
 t_unlimited_price = 0.05
 
+
 def cheapest_custom_instance(cid, cpu_request, memory_request):
     max_price = 100000000.0
     custom_price = max_price
@@ -200,6 +201,8 @@ class InstanceSelector(object):
                 if is_t_unlimited:
                     cheapest_instance += ' (unlimited)'
         lowest_spot_price = lowest_price
+        if cheapest_instance == "":
+            cheapest_instance = "Standard_B1ls"
         lowest_spot_price = min(lowest_spot_price, self.get_spot_price(cheapest_instance))
         return cheapest_instance, lowest_price, lowest_spot_price
 
@@ -226,10 +229,10 @@ class PriceGetter:
         return self.key_pattern.format(provider=provider, region=region, instance_type=instance_type)
 
     def _convert_entry_to_dict(self, data):
+
         prices_str = data.decode('utf-8')
         if "null" in prices_str:
             prices_str = prices_str.replace("null", "{}")
-        print(f"got raw data: {prices_str}")
         try:
             prices = ast.literal_eval(prices_str)
         except ValueError:
@@ -272,7 +275,8 @@ def make_instance_selector(datadir, cloud_provider, region):
         with open(filepath) as fp:
             jsonstr = fp.read()
             custom_inst_data_by_region = json.loads(jsonstr)
-    redis_client = redis.Redis("localhost", 6379)
+    redis_host = os.getenv('REDIS_HOST', 'localhost')
+    redis_client = redis.Redis(redis_host, 6379)
     price_getter = PriceGetter(
         provider=cloud_provider,
         redis_client=redis_client
