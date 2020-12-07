@@ -1,10 +1,11 @@
 import os
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from instance_selector import (
     make_instance_selector,
     cheapest_custom_instance,
+    PriceGetter
 )
 from kubernetes.client.models import V1Node, V1NodeList, V1ObjectMeta, V1Pod, V1PodSpec, V1Container, \
     V1ResourceRequirements
@@ -89,14 +90,16 @@ class TestUtils(unittest.TestCase):
 
 class TestInstanceSelector(unittest.TestCase):
     def assert_matches(self, cpu, memory, gpu, expected):
-        inst_type, _ = self.instance_selector.get_cheapest_instance(cpu, memory, gpu)
+        inst_type, _, _ = self.instance_selector.get_cheapest_instance(cpu, memory, gpu)
         msg = f'{self.instance_selector.cloud}: {cpu}, {memory}, {gpu} != expected {expected}, got {inst_type}'
         self.assertEqual(inst_type, expected, msg)
 
     def run_instance_test(self, cloud, region, cases):
-        self.instance_selector = make_instance_selector(datadir, cloud, region)
-        for case in cases:
-            self.assert_matches(*case)
+        with patch('cost_calculator.instance_selector.redis.Redis.get') as mocked_get:
+            mocked_get.return_value = b'{"onDemandPrice": 0.0252, "spotPrices": null}'
+            self.instance_selector = make_instance_selector(datadir, cloud, region)
+            for case in cases:
+                self.assert_matches(*case)
 
     def test_price_for_gce_custom_instance(self):
         cases = [
@@ -228,6 +231,49 @@ class TestClusterCost(unittest.TestCase):
         for node in nodes:
             self.assertNotEqual(node.name, 'kip-node')
             self.assertIn(node.name, physical_nodes)
+
+
+class RedisMock:
+    def __init__(self, store):
+        self.store = store
+
+    def get(self, key):
+        return self.store.get(key)
+
+
+class TestPriceGetter(unittest.TestCase):
+    def test_get_spot_price(self):
+        cases = [
+            {
+                "store": {
+                    "/banzaicloud.com/cloudinfo/providers/azure/regions/eastus/prices/Standard_B1ls": b'{"onDemandPrice": 0.0252, "spotPrice": null}'
+                },
+                "instanceType": "Standard_B1ls",
+                "region": "East US",
+                "expected_price": 0.0252
+            },
+            {
+                "store": {
+                    "/banzaicloud.com/cloudinfo/providers/azure/regions/eastus/prices/Standard_B1ls": b'{"onDemandPrice": 0.0252}'
+                },
+                "instanceType": "Standard_B1ls",
+                "region": "East US",
+                "expected_price": 0.0252
+            },
+            {
+                "store": {
+                    "/banzaicloud.com/cloudinfo/providers/azure/regions/eastus/prices/Standard_B1ls": b'{"onDemandPrice": 0.0252, "spotPrice": {"subregion1": 0.024, "subregion2": 0.0001}}'
+                },
+                "instanceType": "Standard_B1ls",
+                "region": "East US",
+                "expected_price": 0.0001
+            },
+        ]
+        for case in cases:
+            redis_client = RedisMock(store=case['store'])
+            price_getter = PriceGetter(provider='azure', redis_client=redis_client)
+            spot_price = price_getter.get_spot_price(instance_type=case['instanceType'], region=case['region'])
+            self.assertEqual(spot_price, case['expected_price'])
 
 
 if __name__ == '__main__':

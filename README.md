@@ -9,33 +9,53 @@ Follow these instructions to install the Nodeless Cost Calculator from the comma
 ### Prerequisites
 
 - A Kubernetes cluster
-- [envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html)
+- [Kustomize](https://kustomize.io)
 
 ### Install from the command line
 
-Set environment variables (modify if necessary) and apply the manifests:
+You need to set cloud credentials in `kustomize/overlays/<your-provider>/config.toml` and then apply those with `kubectl -k .`
+Cloud credentials are used to fetch on-demand and spot prices.
 
-**AWS**
+#### AWS
+In AWS [config.toml](kustomize/overlays/aws/config.toml)
+```toml
+region = "us-east-1"
 
-    export NAMESPACE=default
-    export CLOUD_PROVIDER=aws
-    export REGION=us-east-1
+# Static credentials
+accessKey = ""
+secretKey = ""
+```
+and then run
+`kustomize build kustomize/overlays/azure | kubectl apply -f -`
 
-**GCE**
+#### GCE
+In GCE [config.toml](kustomize/overlays/gce/config.toml):
+```toml
+# base64 encoded credentials in json format (base64 encoded content of the credential file)
+credentials = ""
 
-    export NAMESPACE=default
-    export CLOUD_PROVIDER=gce
-    export REGION=us-east1
+# credentialsFile = ""
 
-**Azure**
+# project = ""
+```
+and then run
+`kustomize build kustomize/overlays/gce | kubectl apply -f -`
 
-    export NAMESPACE=default
-    export CLOUD_PROVIDER=azure
-    export REGION="East US"
+#### Azure
+In Azure [config.toml](kustomize/overlays/azure/config.toml): 
+```toml
+subscriptionId = ""
 
-**Apply Manifests**
+# Client credentials
+clientId = ""
+clientSecret = ""
+tenantId = ""
+```
+and then run
+`kustomize build kustomize/overlays/azure | kubectl apply -f -`
 
-    envsubst < manifests.yaml | kubectl apply -f -
+Scraping spot prices usually takes up to 5-7 minutes. Once it's done you should see that all containers are ready:
+`nodeless-cost-calculator-5567f8585-b9d5z   3/3     Running   0          5m8s`
 
 Once the nodeless-cost-calculator deployment is running, the easiest way to connect to the pod is to use `kubectl port-forward`
 
@@ -44,6 +64,19 @@ Once the nodeless-cost-calculator deployment is running, the easiest way to conn
 ## Uninstall
 
     kubectl -n$NAMESPACE delete Deployment,ServiceAccount,ClusterRole,ClusterRoleBinding -l app.kubernetes.io/name=nodeless-cost-calculator
+
+## Running with static data input
+Once you have data about nodes and pods in json, you can run cost calculator in your local cluster and still get calculated results.
+To do this, you need to overwrite [input_example.json](kustomize/overlays/file-input).
+
+1. Get nodes data:
+`kubectl get nodes -o json | jq -r '.items[] | {name: .metadata.name, labels: .metadata.labels}' > nodes.json`
+2. Get workloads data: 
+`kubectl get pods --all-namespaces -o json | jq -r '.items[] | { name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers[].resources, initContainers: .spec.initContainers }' > pods.json`
+3. Place files in `scripts` and run `python data_sanitizer.py` from there. This will create input file from your data for cost-calculator. 
+4. Copy this file to `kustomize/overlays/file-input/input_example.json`.
+Now you're ready to deploy cost-calculator to your cluster using
+`kustomize build kustomize/overlays/file-input | kubectl apply -f -`
 
 
 ## Unsupported features

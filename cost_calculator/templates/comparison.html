@@ -28,8 +28,10 @@
   </form>
   <div class="savings-summary-box">
     <p class="savings-summary-header"><b>Forcasted {{ data.selected_timeframe }}ly savings</b></p>
-    <span class="savings-summary-text">${{ data.savings }}</span>
+    <span class="savings-summary-text">Using on-demand instances: ${{ data.savings }}</span>
+    <span class="savings-summary-text">Using spot instances: ${{ data.savings_for_spot }}</span>
     <p><b>You will save:</b> {{ data.savings_percentage }}%</p>
+    <p><b>You will save on spot:</b> {{ data.savings_spot_percentage }}%</p>
   </div>
 
   <table class="table savings-table">
@@ -37,11 +39,13 @@
       <tr>
         <th class="savings-table-header">Current Cost</th>
         <th class="savings-table-header">Projected Nodeless Cost</th>
+        <th class="savings-table-header">Projected Nodeless on spot Cost</th>
       </tr>
       <tbody>
         <tr>
           <td><b>Cost:</b> ${{ data.node_cost }}</td>
           <td><b>Cost:</b> ${{ data.pod_cost }}</td>
+          <td><b>Cost:</b> ${{ data.pod_spot_cost }}</td>
         </tr>
         <!-- <tr>
           <td><b>Instance Count:</b> {{ data.node_count }}</td>

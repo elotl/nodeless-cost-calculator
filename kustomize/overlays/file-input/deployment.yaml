@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: nodeless-cost-calculator
+  name: nodeless-cost-calculator
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: nodeless-cost-calculator
+        image: elotl/nodeless-cost-calculator:v0.0.3-41-gd43b796-dirty
+        env:
+        - name: CLOUD_PROVIDER
+          value: azure
+        - name: REGION
+          value: "East US"
+        - name: FROM_FILE
+          value: 'yes'
+        - name: INPUT_FILE_PATH
+          value: /etc/calcapp/input_data.json
+        volumeMounts:
+          - mountPath: /etc/calcapp/
+            name: hearstdata
+      volumes:
+        - name: hearstdata
+          secret:
+            secretName: hearstdata
+            items:
+              - key: prod_cluster_resources.json
+                path: input_data.json

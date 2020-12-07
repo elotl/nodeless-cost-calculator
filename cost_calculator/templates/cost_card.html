@@ -1,6 +1,7 @@
 {% block costcard %}
 <div class=cost-card>
   <p><strong>Cost:</strong> ${{ cost }} per {{ timeframe }}</p>
+  <p><strong>Spot cost:</strong>${{ spot_cost }} per {{ timeframe }}</p>
   <p><strong>Instances:</strong> {{ num_pods }} </p>
 </div>
 {% endblock %}

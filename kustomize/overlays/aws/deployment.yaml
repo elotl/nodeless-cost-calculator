@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: nodeless-cost-calculator
+  name: nodeless-cost-calculator
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: nodeless-cost-calculator
+        env:
+        - name: CLOUD_PROVIDER
+          value: aws
+        - name: REGION
+          value: us-east-1
+      - name: cloudinfo
+        readinessProbe:
+          httpGet:
+            path: /api/v1/providers/amazon/services/compute/regions/useast1/products
+      volumes:
+        - name: cloudinfo-config
+          secret:
+            secretName: cloudinfo-config

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeless-cost-calculator
+  namespace: default
+  labels:
+    app.kubernetes.io/name: nodeless-cost-calculator
+spec:
+  selector:
+    matchLabels:
+      run: nodeless-cost-calculator
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      namespace: default
+      labels:
+        run: nodeless-cost-calculator
+        app.kubernetes.io/name: nodeless-cost-calculator
+    spec:
+      serviceAccount: nodeless-cost-calculator
+      serviceAccountName: nodeless-cost-calculator
+      containers:
+        - name: nodeless-cost-calculator
+          image: elotl/nodeless-cost-calculator:v0.0.3-37-g535a896-dirty
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+          env:
+            - name: CLOUD_PROVIDER
+              value: azure
+            - name: REGION
+              value: East US
+            - name: REDIS_HOST
+              value: redis

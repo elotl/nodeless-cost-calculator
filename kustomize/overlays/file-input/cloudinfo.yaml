@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudinfo
+  namespace: default
+  labels:
+    app.kubernetes.io/name: cloudinfo
+spec:
+  template:
+    spec:
+      containers:
+        - name: cloudinfo
+          volumeMounts:
+            - name: cloudinfo-config
+              mountPath: /etc/cloudinfo/config.toml
+              subPath: config.toml
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              port: 8000
+              path: /api/v1/providers/azure/services/compute/regions/eastus/products
+            initialDelaySeconds: 120
+            periodSeconds: 60
+            timeoutSeconds: 1200
+      volumes:
+        - name: cloudinfo-config
+          secret:
+            secretName: cloudinfo-config

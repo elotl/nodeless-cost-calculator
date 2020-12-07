@@ -1,3 +1,4 @@
+import ast
 import math
 import os
 import json
@@ -5,8 +6,10 @@ import logging
 
 # load instance data for aws and azure
 #
+import redis
 
 t_unlimited_price = 0.05
+
 
 def cheapest_custom_instance(cid, cpu_request, memory_request):
     max_price = 100000000.0
@@ -55,11 +58,21 @@ def parse_gce_custom_machine(inst_type):
 
 
 class InstanceSelector(object):
-    def __init__(self, cloud, region,
-                 inst_data_by_region, custom_inst_data_by_region):
+    def __init__(
+            self,
+            cloud,
+            region,
+            inst_data_by_region,
+            custom_inst_data_by_region,
+            price_getter=None,
+            redis_client=None
+    ):
         self.cloud = cloud
         self.inst_data = inst_data_by_region[region]
         self.custom_data = custom_inst_data_by_region.get(region, {})
+        self.redis = redis_client
+        self.price_getter = price_getter
+        self.region = region
 
     def spec_for_inst_type(self, inst_type):
         if 'custom' in inst_type:
@@ -159,6 +172,12 @@ class InstanceSelector(object):
         supported_gpus = inst.get('supportedGPUTypes', {}).get(gpu_type, 0)
         return supported_gpus >= gpu_count
 
+    def get_spot_price(self, instance_type):
+        spot_price = 10000000.0
+        if self.price_getter:
+            spot_price = self.price_getter.get_spot_price(instance_type, self.region)
+        return spot_price
+
     def get_cheapest_instance(self, cpu_request, memory_request, gpu_spec):
         gpu_count, gpu_type = self.parse_gpu_spec(gpu_spec)
         matches = self.inst_data
@@ -176,12 +195,71 @@ class InstanceSelector(object):
         lowest_price = 100000000.0
         for inst in matches:
             price, is_t_unlimited = self.price_for_cpu_spec(cpu_request, inst)
-            if price > 0.0 and price < lowest_price:
+            if 0.0 < price < lowest_price:
                 lowest_price = price
                 cheapest_instance = inst['instanceType']
                 if is_t_unlimited:
                     cheapest_instance += ' (unlimited)'
-        return cheapest_instance, lowest_price
+        lowest_spot_price = lowest_price
+        if cheapest_instance == "":
+            cheapest_instance = "Standard_B1ls"
+        lowest_spot_price = min(lowest_spot_price, self.get_spot_price(cheapest_instance))
+        return cheapest_instance, lowest_price, lowest_spot_price
+
+
+class PriceGetter:
+    provider_keys_map = {
+        "azure": "azure",
+        "aws": "amazon",
+        "gce": "google"
+    }
+
+    def __init__(self, provider, redis_client):
+        self.provider = provider
+        self.redis_client = redis_client
+        self.key_pattern = "/banzaicloud.com/cloudinfo/providers/{provider}/regions/{region}/prices/{instance_type}"
+
+    def _get_azure_region_key(self, region):
+        return region.replace(" ", "").lower()
+
+    def _get_key(self, instance_type, region):
+        provider = self.provider_keys_map[self.provider]
+        if provider == "azure":
+            region = self._get_azure_region_key(region)
+        return self.key_pattern.format(provider=provider, region=region, instance_type=instance_type)
+
+    def _convert_entry_to_dict(self, data):
+
+        prices_str = data.decode('utf-8')
+        if "null" in prices_str:
+            prices_str = prices_str.replace("null", "{}")
+        try:
+            prices = ast.literal_eval(prices_str)
+        except ValueError:
+            raise ValueError(f"cannot convert {prices_str} to dict")
+        return prices
+
+    def _get_lowest_spot_price(self, prices):
+        spot_prices = prices.get("spotPrice")
+        if spot_prices is None or len(spot_prices.values()) == 0:
+            # no spotPrices found, get on-demand price
+            return prices['onDemandPrice']
+        return min(spot_prices.values())
+
+    def _get_data_for_instance(self, instance_type, region):
+        key = self._get_key(region=region, instance_type=instance_type)
+        data = self.redis_client.get(key)
+        prices = self._convert_entry_to_dict(data)
+        return prices
+
+    def get_spot_price(self, instance_type, region):
+        prices = self._get_data_for_instance(instance_type, region)
+        spot_price = self._get_lowest_spot_price(prices)
+        return spot_price
+    #
+    # def get_ondemand_price(self, instance_type, region):
+    #     prices = self._get_data_for_instance(instance_type, region)
+    #     return prices['onDemandPrice']
 
 
 def make_instance_selector(datadir, cloud_provider, region):
@@ -197,5 +275,16 @@ def make_instance_selector(datadir, cloud_provider, region):
         with open(filepath) as fp:
             jsonstr = fp.read()
             custom_inst_data_by_region = json.loads(jsonstr)
-    return InstanceSelector(cloud_provider, region,
-                            inst_data_by_region, custom_inst_data_by_region)
+    redis_host = os.getenv('REDIS_HOST', 'localhost')
+    redis_client = redis.Redis(redis_host, 6379)
+    price_getter = PriceGetter(
+        provider=cloud_provider,
+        redis_client=redis_client
+    )
+    return InstanceSelector(
+        cloud_provider,
+        region,
+        inst_data_by_region,
+        custom_inst_data_by_region,
+        price_getter=price_getter,
+    )
