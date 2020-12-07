@@ -65,6 +65,19 @@ Once the nodeless-cost-calculator deployment is running, the easiest way to conn
 
     kubectl -n$NAMESPACE delete Deployment,ServiceAccount,ClusterRole,ClusterRoleBinding -l app.kubernetes.io/name=nodeless-cost-calculator
 
+## Running with static data input
+Once you have data about nodes and pods in json, you can run cost calculator in your local cluster and still get calculated results.
+To do this, you need to overwrite [input_example.json](kustomize/overlays/file-input).
+
+1. Get nodes data:
+`kubectl get nodes -o json | jq -r '.items[] | {name: .metadata.name, labels: .metadata.labels}' > nodes.json`
+2. Get workloads data: 
+`kubectl get pods --all-namespaces -o json | jq -r '.items[] | { name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers[].resources, initContainers: .spec.initContainers }' > pods.json`
+3. Place files in `scripts` and run `python data_sanitizer.py` from there. This will create input file from your data for cost-calculator. 
+4. Copy this file to `kustomize/overlays/file-input/input_example.json`.
+Now you're ready to deploy cost-calculator to your cluster using
+`kustomize build kustomize/overlays/file-input | kubectl apply -f -`
+
 
 ## Unsupported features
 

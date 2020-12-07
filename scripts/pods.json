@@ -1,0 +1,33 @@
+{
+  "name": "cert-manager-5d669ffbd8-bxfvd",
+  "namespace": "cert-manager",
+  "containers": {},
+  "initContainers": null
+}
+{
+  "name": "cert-manager-cainjector-79b7fc64f-wxqqc",
+  "namespace": "cert-manager",
+  "containers": {},
+  "initContainers": null
+}
+{
+  "name": "cert-manager-webhook-6484955794-c7qrd",
+  "namespace": "cert-manager",
+  "containers": {},
+  "initContainers": null
+}
+{
+  "name": "account-notification-services-webapp-cc47d498d-t464l",
+  "namespace": "default",
+  "containers": {
+    "limits": {
+      "memory": "1536Mi"
+    },
+    "requests": {
+      "cpu": "100m",
+      "memory": "768Mi"
+    }
+  },
+  "initContainers": null
+}
+
