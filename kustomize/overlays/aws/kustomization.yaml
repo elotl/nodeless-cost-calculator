@@ -9,3 +9,5 @@ secretGenerator:
       - config.toml
 patchesStrategicMerge:
 - deployment.yaml
+- cloudinfo.yaml
+

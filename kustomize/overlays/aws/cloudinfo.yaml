@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudinfo
+  namespace: default
+  labels:
+    app.kubernetes.io/name: cloudinfo
+spec:
+  template:
+    spec:
+      containers:
+        - name: cloudinfo
+          volumeMounts:
+            - name: cloudinfo-config
+              mountPath: /etc/cloudinfo/config.toml
+              subPath: config.toml
+              readOnly: true
+      volumes:
+        - name: cloudinfo-config
+          secret:
+            secretName: cloudinfo-config

@@ -10,16 +10,11 @@ spec:
     spec:
       containers:
       - name: nodeless-cost-calculator
+        image: elotl/nodeless-cost-calculator:v0.0.3-55-g1a4a19e-dirty
         env:
         - name: CLOUD_PROVIDER
           value: aws
         - name: REGION
           value: us-east-1
-      - name: cloudinfo
-        readinessProbe:
-          httpGet:
-            path: /api/v1/providers/amazon/services/compute/regions/useast1/products
-      volumes:
-        - name: cloudinfo-config
-          secret:
-            secretName: cloudinfo-config
+        - name: REDIS_HOST
+          value: redis

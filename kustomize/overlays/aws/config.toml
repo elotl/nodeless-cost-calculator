@@ -41,7 +41,7 @@ enabled = true
 # https://aws.amazon.com/about-aws/global-infrastructure/regions_az
 region = "us-east-1"
 
-# Static credentials
+## Static credentials
 accessKey = ""
 secretKey = ""
 
@@ -131,7 +131,7 @@ format = "yaml"
 
 [store.redis]
 enabled = true
-host = "localhost"
+host = "redis"
 port = 6379
 
 [store.cassandra]
